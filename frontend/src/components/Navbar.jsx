@@ -27,7 +27,7 @@ export default function Navbar() {
           </button>
           <div className="hidden text-right sm:block">
             <div className="text-sm font-semibold">{user?.name}</div>
-            <div className="text-xs text-slate-500">{user?.role}</div>
+            <div className="text-xs text-slate-500">{user?.role_label || user?.role}</div>
           </div>
           <button className="btn-secondary h-10 w-10 px-0" onClick={logout} aria-label="Log out">
             <LogOut size={18} />

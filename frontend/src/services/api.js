@@ -13,10 +13,19 @@ api.interceptors.request.use((config) => {
 api.interceptors.response.use(
   (response) => response,
   (error) => {
+    const message = error.response?.data?.message || error.message || "An unexpected error occurred";
+    
     if (error.response?.status === 401) {
       localStorage.removeItem("visondesk_token");
       localStorage.removeItem("visondesk_user");
+      // Optional: window.location.href = "/login";
     }
+    
+    console.error(`[API Error] ${error.config?.method?.toUpperCase()} ${error.config?.url}:`, message);
+    
+    // Attach the cleaned message to the error object for easier access in components
+    error.apiMessage = message;
+    
     return Promise.reject(error);
   }
 );

@@ -1,6 +1,7 @@
 import { Download, Plus, Printer, Trash2 } from "lucide-react";
 import jsPDF from "jspdf";
 import { useState } from "react";
+import SearchBar from "../components/SearchBar";
 import DataTable from "../components/DataTable";
 import Modal from "../components/Modal";
 import PageHeader from "../components/PageHeader";
@@ -14,8 +15,16 @@ const statuses = ["Pending", "In Progress", "Ready", "Delivered"];
 export default function Orders() {
   const { push } = useToast();
   const [open, setOpen] = useState(false);
-  const [form, setForm] = useState({ customer_id: "", branch_id: "", tax_rate: 0.18, notes: "", items: [{ item_id: "", quantity: 1, unit_price: 0 }] });
-  const { data, loading, refetch } = useApi(() => api.get("/orders"), []);
+  const [form, setForm] = useState({
+    customer_id: "",
+    branch_id: "",
+    tax_rate: 0.18,
+    notes: "",
+    items: [{ item_id: "", quantity: 1, unit_price: 0 }]
+  });
+
+  const [q, setQ] = useState("");
+  const { data, loading, refetch } = useApi(() => api.get("/orders", { params: { q } }), [q]);
   const { data: invoices } = useApi(() => api.get("/invoices"), []);
   const { data: customers } = useApi(() => api.get("/customers?limit=100"), []);
   const { data: products } = useApi(() => api.get("/products?limit=100"), []);
@@ -53,7 +62,7 @@ export default function Orders() {
   const setItem = (index, patch) => {
     setForm((current) => ({
       ...current,
-      items: current.items.map((item, itemIndex) => itemIndex === index ? { ...item, ...patch } : item)
+      items: current.items.map((item, itemIndex) => (itemIndex === index ? { ...item, ...patch } : item))
     }));
   };
 
@@ -62,21 +71,50 @@ export default function Orders() {
       <PageHeader
         title="Orders"
         eyebrow="Delivery tracking and invoice workflow"
-        actions={<><button className="btn-primary" onClick={() => setOpen(true)}><Plus size={17} /> Create order</button><button className="btn-secondary" onClick={() => window.print()}><Printer size={17} /> Print</button></>}
+        actions={(
+          <>
+            <button className="btn-primary" onClick={() => setOpen(true)}>
+              <Plus size={17} /> Create order
+            </button>
+            <button className="btn-secondary" onClick={() => window.print()}>
+              <Printer size={17} /> Print
+            </button>
+          </>
+        )}
       />
-      {loading ? <div className="card p-6">Loading orders...</div> : (
-        <DataTable
-          columns={[
-            { key: "order_id", header: "Order" },
-            { key: "customer_name", header: "Customer" },
-            { key: "branch_name", header: "Branch" },
-            { key: "status", header: "Status", render: (row) => <StatusBadge status={row.status} /> },
-            { key: "total_amount", header: "Total", render: (row) => `$${Number(row.total_amount).toFixed(2)}` },
-            { key: "change", header: "Move to", render: (row) => <select className="input min-w-36" value={row.status} onChange={(event) => updateStatus(row, event.target.value)}>{statuses.map((status) => <option key={status}>{status}</option>)}</select> }
-          ]}
-          rows={data || []}
-        />
+
+      {loading ? (
+        <div className="card p-6">Loading orders...</div>
+      ) : (
+        <>
+          <div className="mb-3 flex justify-end">
+            <SearchBar value={q} onChange={setQ} placeholder="Search orders" />
+          </div>
+
+          <DataTable
+            columns={[
+              { key: "order_id", header: "Order" },
+              { key: "customer_name", header: "Customer" },
+              { key: "branch_name", header: "Branch" },
+              { key: "status", header: "Status", render: (row) => <StatusBadge status={row.status} /> },
+              { key: "total_amount", header: "Total", render: (row) => `$${Number(row.total_amount).toFixed(2)}` },
+              {
+                key: "change",
+                header: "Move to",
+                render: (row) => (
+                  <select className="input min-w-36" value={row.status} onChange={(event) => updateStatus(row, event.target.value)}>
+                    {statuses.map((status) => (
+                      <option key={status}>{status}</option>
+                    ))}
+                  </select>
+                )
+              }
+            ]}
+            rows={data || []}
+          />
+        </>
       )}
+
       <h2 className="mb-3 mt-8 text-lg font-bold">Invoices</h2>
       <DataTable
         columns={[
@@ -84,34 +122,96 @@ export default function Orders() {
           { key: "customer_name", header: "Customer" },
           { key: "payment_status", header: "Payment" },
           { key: "total_amount", header: "Total", render: (row) => `$${Number(row.total_amount).toFixed(2)}` },
-          { key: "download", header: "", render: (row) => <button className="btn-secondary" onClick={() => downloadInvoice(row)}><Download size={16} /> PDF</button> }
+          {
+            key: "download",
+            header: "",
+            render: (row) => (
+              <button className="btn-secondary" onClick={() => downloadInvoice(row)}>
+                <Download size={16} /> PDF
+              </button>
+            )
+          }
         ]}
         rows={invoices || []}
       />
+
       <Modal title="Create order" open={open} onClose={() => setOpen(false)}>
         <form onSubmit={createOrder} className="space-y-4">
           <div className="grid gap-4 sm:grid-cols-2">
-            <label className="text-sm font-semibold">Customer<select className="input mt-2" value={form.customer_id} onChange={(event) => setForm({ ...form, customer_id: event.target.value })} required><option value="">Select customer</option>{customers?.data?.map((customer) => <option key={customer.customer_id} value={customer.customer_id}>{customer.name} - {customer.mobile_number}</option>)}</select></label>
-            <label className="text-sm font-semibold">Branch<select className="input mt-2" value={form.branch_id} onChange={(event) => setForm({ ...form, branch_id: event.target.value })} required><option value="">Select branch</option>{branches?.map((branch) => <option key={branch.branch_id} value={branch.branch_id}>{branch.name}</option>)}</select></label>
+            <label className="text-sm font-semibold">
+              Customer
+              <select
+                className="input mt-2"
+                value={form.customer_id}
+                onChange={(event) => setForm({ ...form, customer_id: event.target.value })}
+                required
+              >
+                <option value="">Select customer</option>
+                {customers?.data?.map((customer) => (
+                  <option key={customer.customer_id} value={customer.customer_id}>
+                    {customer.name} - {customer.mobile_number}
+                  </option>
+                ))}
+              </select>
+            </label>
+
+            <label className="text-sm font-semibold">
+              Branch
+              <select
+                className="input mt-2"
+                value={form.branch_id}
+                onChange={(event) => setForm({ ...form, branch_id: event.target.value })}
+                required
+              >
+                <option value="">Select branch</option>
+                {branches?.map((branch) => (
+                  <option key={branch.branch_id} value={branch.branch_id}>
+                    {branch.name}
+                  </option>
+                ))}
+              </select>
+            </label>
           </div>
+
           <div className="space-y-3">
             {form.items.map((item, index) => (
               <div key={index} className="grid gap-3 rounded-lg border border-slate-200 p-3 dark:border-slate-800 sm:grid-cols-[1fr_90px_120px_44px]">
-                <select className="input" value={item.item_id} onChange={(event) => {
-                  const product = products?.data?.find((entry) => String(entry.item_id) === event.target.value);
-                  setItem(index, { item_id: event.target.value, unit_price: product?.price || 0 });
-                }} required>
+                <select
+                  className="input"
+                  value={item.item_id}
+                  onChange={(event) => {
+                    const product = products?.data?.find((entry) => String(entry.item_id) === event.target.value);
+                    setItem(index, { item_id: event.target.value, unit_price: product?.price || 0 });
+                  }}
+                  required
+                >
                   <option value="">Select product</option>
-                  {products?.data?.map((product) => <option key={product.item_id} value={product.item_id}>{product.name} - ${Number(product.price).toFixed(2)}</option>)}
+                  {products?.data?.map((product) => (
+                    <option key={product.item_id} value={product.item_id}>
+                      {product.name} - ${Number(product.price).toFixed(2)}
+                    </option>
+                  ))}
                 </select>
+
                 <input className="input" type="number" min="1" value={item.quantity} onChange={(event) => setItem(index, { quantity: Number(event.target.value) })} />
                 <input className="input" type="number" min="0" value={item.unit_price} onChange={(event) => setItem(index, { unit_price: Number(event.target.value) })} />
-                <button type="button" className="btn-secondary h-10 px-0" onClick={() => setForm({ ...form, items: form.items.filter((_, itemIndex) => itemIndex !== index) })}><Trash2 size={16} /></button>
+
+                <button type="button" className="btn-secondary h-10 px-0" onClick={() => setForm({ ...form, items: form.items.filter((_, itemIndex) => itemIndex !== index) })}>
+                  <Trash2 size={16} />
+                </button>
               </div>
             ))}
           </div>
-          <button type="button" className="btn-secondary" onClick={() => setForm({ ...form, items: [...form.items, { item_id: "", quantity: 1, unit_price: 0 }] })}><Plus size={16} /> Add line</button>
-          <label className="block text-sm font-semibold">Notes<textarea className="input mt-2" value={form.notes} onChange={(event) => setForm({ ...form, notes: event.target.value })} /></label>
+
+          <button type="button" className="btn-secondary" onClick={() => setForm({ ...form, items: [...form.items, { item_id: "", quantity: 1, unit_price: 0 }] })}>
+            <Plus size={16} /> Add line
+          </button>
+
+          <label className="block text-sm font-semibold">
+            Notes
+            <textarea className="input mt-2" value={form.notes} onChange={(event) => setForm({ ...form, notes: event.target.value })} />
+          </label>
+
           <button className="btn-primary w-full">Generate order and invoice</button>
         </form>
       </Modal>

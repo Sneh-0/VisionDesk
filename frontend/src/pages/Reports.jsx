@@ -5,8 +5,10 @@ import api from "../services/api";
 import { useApi } from "../hooks/useApi";
 
 export default function Reports() {
-  const { data: sales, loading } = useApi(() => api.get("/reports/sales"), []);
+  const { data: report, loading } = useApi(() => api.get("/reports/sales"), []);
   const { data: branches } = useApi(() => api.get("/branches/analytics"), []);
+  const branchSales = report?.branch_sales || [];
+  const productSales = report?.product_sales_by_branch || [];
 
   return (
     <>
@@ -15,9 +17,9 @@ export default function Reports() {
         <h2 className="mb-5 text-lg font-bold">Branch sales</h2>
         <div className="h-72">
           <ResponsiveContainer>
-            <BarChart data={branches || []}>
+            <BarChart data={branchSales.length ? branchSales : branches || []}>
               <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-              <XAxis dataKey="name" />
+              <XAxis dataKey="branch_name" />
               <YAxis />
               <Tooltip />
               <Bar dataKey="sales" fill="#2474e8" radius={[6, 6, 0, 0]} />
@@ -26,14 +28,43 @@ export default function Reports() {
         </div>
       </section>
       {loading ? <div className="card p-6">Loading reports...</div> : (
-        <DataTable columns={[
-          { key: "date", header: "Date", render: (row) => new Date(row.date).toLocaleDateString() },
-          { key: "branch_name", header: "Branch" },
-          { key: "invoices", header: "Invoices" },
-          { key: "subtotal", header: "Subtotal", render: (row) => `$${Number(row.subtotal).toFixed(2)}` },
-          { key: "tax", header: "Tax", render: (row) => `$${Number(row.tax).toFixed(2)}` },
-          { key: "total", header: "Total", render: (row) => `$${Number(row.total).toFixed(2)}` }
-        ]} rows={sales || []} />
+        <div className="space-y-6">
+          <DataTable
+            columns={[
+              { key: "branch_name", header: "Branch" },
+              { key: "sales", header: "Sales", render: (row) => `$${Number(row.sales).toFixed(2)}` },
+              { key: "orders", header: "Orders" },
+              { key: "items_sold", header: "Items sold" }
+            ]}
+            rows={branchSales}
+          />
+          <DataTable
+            columns={[
+              { key: "branch_name", header: "Branch" },
+              { key: "product_name", header: "Product" },
+              { key: "units", header: "Units" },
+              { key: "revenue", header: "Revenue", render: (row) => `$${Number(row.revenue).toFixed(2)}` }
+            ]}
+            rows={productSales}
+          />
+          <div className="card p-5">
+            <h3 className="mb-3 text-base font-bold">Summary</h3>
+            <div className="grid gap-4 sm:grid-cols-3">
+              <div>
+                <div className="text-sm text-slate-500">Total sales</div>
+                <div className="text-xl font-bold">${Number(report?.summary?.total_sales || 0).toFixed(2)}</div>
+              </div>
+              <div>
+                <div className="text-sm text-slate-500">Orders</div>
+                <div className="text-xl font-bold">{report?.summary?.total_orders || 0}</div>
+              </div>
+              <div>
+                <div className="text-sm text-slate-500">Customers</div>
+                <div className="text-xl font-bold">{report?.summary?.total_customers || 0}</div>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
     </>
   );

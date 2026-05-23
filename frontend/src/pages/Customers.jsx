@@ -51,7 +51,7 @@ export default function Customers() {
             { key: "mobile_number", header: "Mobile" },
             { key: "email", header: "Email" },
             { key: "loyalty_points", header: "Loyalty" },
-            { key: "actions", header: "", render: (row) => user?.role === "Admin" && <button className="btn-secondary h-9 w-9 px-0" onClick={() => remove(row.customer_id)}><Trash2 size={16} /></button> }
+            { key: "actions", header: "", render: (row) => ["owner", "branch_admin"].includes(user?.role) && <button className="btn-secondary h-9 w-9 px-0" onClick={() => remove(row.customer_id)}><Trash2 size={16} /></button> }
           ]}
           rows={rows}
         />

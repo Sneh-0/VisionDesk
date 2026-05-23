@@ -8,7 +8,7 @@ export default function Login() {
   const { login, isAuthenticated } = useAuth();
   const { push } = useToast();
   const navigate = useNavigate();
-  const [form, setForm] = useState({ email: "admin@visiondesk.com", password: "admin123" });
+  const [form, setForm] = useState({ email: "owner@visiondesk.com", password: "owner123" });
   const [loading, setLoading] = useState(false);
 
   if (isAuthenticated) return <Navigate to="/dashboard" replace />;
@@ -42,7 +42,7 @@ export default function Login() {
           <h1 className="text-4xl font-bold tracking-tight sm:text-5xl">Customers, prescriptions, stock, and sales in one calm workspace.</h1>
           <p className="mt-5 text-lg leading-8 text-slate-300">Run multi-branch optical stores with inventory control, invoice workflows, prescription history, supplier records, and sales analytics.</p>
         </div>
-        <div className="text-sm text-slate-500">Demo: admin@visiondesk.com / admin123</div>
+        <div className="text-sm text-slate-500">Demo: owner / branch admin / staff accounts are separated by role</div>
       </section>
       <section className="grid place-items-center bg-slate-50 px-6 text-slate-950 dark:bg-slate-900 dark:text-white">
         <form onSubmit={submit} className="card w-full max-w-md p-6">

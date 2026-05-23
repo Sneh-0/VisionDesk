@@ -15,9 +15,9 @@ export default function Settings() {
     <>
       <PageHeader title="Settings" eyebrow="Branches, roles, and operating defaults" />
       <div className="mb-6 grid gap-4 sm:grid-cols-3">
-        <StatCard label="Signed in as" value={user?.role} icon={ShieldCheck} />
+        <StatCard label="Signed in as" value={user?.role_label || user?.role} icon={ShieldCheck} />
         <StatCard label="Branches" value={branches?.length || 0} icon={Building2} tone="green" />
-        <StatCard label="Access model" value="Admin / Staff" icon={Users} tone="amber" />
+        <StatCard label="Access model" value="Owner / Branch Admin / Staff" icon={Users} tone="amber" />
       </div>
       <DataTable columns={[
         { key: "name", header: "Branch" },

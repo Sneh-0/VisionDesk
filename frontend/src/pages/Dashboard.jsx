@@ -2,14 +2,21 @@ import { AlertTriangle, ClipboardList, DollarSign, Users } from "lucide-react";
 import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import api from "../services/api";
 import { useApi } from "../hooks/useApi";
+import { useAuth } from "../context/AuthContext";
 import PageHeader from "../components/PageHeader";
 import StatCard from "../components/StatCard";
 import DataTable from "../components/DataTable";
 import StatusBadge from "../components/StatusBadge";
+import OwnerDashboard from "./OwnerDashboard";
 
 export default function Dashboard() {
+  const { user } = useAuth();
   const { data, loading, error } = useApi(() => api.get("/dashboard"), []);
   const money = (value) => `$${Number(value || 0).toLocaleString()}`;
+
+  if (user?.role === "owner") {
+    return <OwnerDashboard />;
+  }
 
   if (loading) return <div className="card p-6">Loading dashboard...</div>;
   if (error) return <div className="card p-6 text-red-600">{error}</div>;

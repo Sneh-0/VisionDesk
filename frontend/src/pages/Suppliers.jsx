@@ -1,5 +1,6 @@
 import { Plus } from "lucide-react";
 import { useState } from "react";
+import SearchBar from "../components/SearchBar";
 import DataTable from "../components/DataTable";
 import Modal from "../components/Modal";
 import PageHeader from "../components/PageHeader";
@@ -13,8 +14,10 @@ export default function Suppliers() {
   const { push } = useToast();
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState(blank);
-  const { data, loading, refetch } = useApi(() => api.get("/suppliers"), []);
-  const { data: history } = useApi(() => api.get("/suppliers/supplies/history"), []);
+  const [q, setQ] = useState("");
+  const [historyQ, setHistoryQ] = useState("");
+  const { data, loading, refetch } = useApi(() => api.get("/suppliers", { params: { q } }), [q]);
+  const { data: history } = useApi(() => api.get("/suppliers/supplies/history", { params: { q: historyQ } }), [historyQ]);
 
   const save = async (event) => {
     event.preventDefault();
@@ -29,14 +32,18 @@ export default function Suppliers() {
     <>
       <PageHeader title="Suppliers" eyebrow="Vendor details and supply records" actions={<button className="btn-primary" onClick={() => setOpen(true)}><Plus size={17} /> Add supplier</button>} />
       {loading ? <div className="card p-6">Loading suppliers...</div> : (
-        <DataTable columns={[
+        <>
+          <div className="mb-3 flex justify-end"><SearchBar value={q} onChange={setQ} placeholder="Search suppliers" /></div>
+          <DataTable columns={[
           { key: "name", header: "Supplier" },
           { key: "contact_person", header: "Contact" },
           { key: "phone", header: "Phone" },
           { key: "email", header: "Email" }
         ]} rows={data || []} />
+        </>
       )}
       <h2 className="mb-3 mt-8 text-lg font-bold">Supply history</h2>
+      <div className="mb-3 flex justify-end"><SearchBar value={historyQ} onChange={setHistoryQ} placeholder="Search supply history" /></div>
       <DataTable columns={[
         { key: "supplied_at", header: "Date", render: (row) => new Date(row.supplied_at).toLocaleDateString() },
         { key: "supplier_name", header: "Supplier" },

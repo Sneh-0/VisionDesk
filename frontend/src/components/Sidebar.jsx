@@ -1,18 +1,24 @@
 import { NavLink } from "react-router-dom";
-import { BarChart3, Boxes, Building2, ClipboardList, Contact, Gauge, Package, Settings, Truck } from "lucide-react";
+import { BarChart3, Boxes, Building2, ClipboardList, Contact, Gauge, Package, Settings, Truck, Users } from "lucide-react";
+import { useAuth } from "../context/AuthContext";
 
 const links = [
-  { to: "/dashboard", label: "Dashboard", icon: Gauge },
-  { to: "/customers", label: "Customers", icon: Contact },
-  { to: "/orders", label: "Orders", icon: ClipboardList },
-  { to: "/inventory", label: "Inventory", icon: Boxes },
-  { to: "/products", label: "Products", icon: Package },
-  { to: "/suppliers", label: "Suppliers", icon: Truck },
-  { to: "/reports", label: "Reports", icon: BarChart3 },
-  { to: "/settings", label: "Settings", icon: Settings }
+  { to: "/dashboard", label: "Dashboard", icon: Gauge, roles: ["owner", "branch_admin", "staff"] },
+  { to: "/customers", label: "Customers", icon: Contact, roles: ["owner", "branch_admin", "staff"] },
+  { to: "/orders", label: "Orders", icon: ClipboardList, roles: ["owner", "branch_admin", "staff"] },
+  { to: "/inventory", label: "Inventory", icon: Boxes, roles: ["owner", "branch_admin"] },
+  { to: "/products", label: "Products", icon: Package, roles: ["owner", "branch_admin"] },
+  { to: "/suppliers", label: "Suppliers", icon: Truck, roles: ["owner", "branch_admin"] },
+  { to: "/reports", label: "Reports", icon: BarChart3, roles: ["owner", "branch_admin"] },
+  { to: "/branches", label: "Branches", icon: Building2, roles: ["owner"] },
+  { to: "/staff", label: "Staff", icon: Users, roles: ["owner", "branch_admin"] },
+  { to: "/settings", label: "Settings", icon: Settings, roles: ["owner", "branch_admin"] }
 ];
 
 export default function Sidebar() {
+  const { user } = useAuth();
+  const visibleLinks = links.filter((link) => link.roles.includes(user?.role));
+
   return (
     <aside className="fixed inset-y-0 left-0 z-30 hidden w-72 border-r border-slate-200 bg-white px-4 py-5 dark:border-slate-800 dark:bg-slate-950 lg:block">
       <div className="mb-8 flex items-center gap-3 px-2">
@@ -23,7 +29,7 @@ export default function Sidebar() {
         </div>
       </div>
       <nav className="space-y-1">
-        {links.map(({ to, label, icon: Icon }) => (
+        {visibleLinks.map(({ to, label, icon: Icon }) => (
           <NavLink
             key={to}
             to={to}
