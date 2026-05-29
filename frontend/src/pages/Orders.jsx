@@ -11,17 +11,32 @@ import { useApi } from "../hooks/useApi";
 import { useToast } from "../context/ToastContext";
 
 const statuses = ["Pending", "In Progress", "Ready", "Delivered"];
+const blankPrescription = {
+  left_eye_sph: "",
+  left_eye_cyl: "",
+  left_eye_axis: "",
+  right_eye_sph: "",
+  right_eye_cyl: "",
+  right_eye_axis: "",
+  ipd_near: "",
+  ipd_far: "",
+  notes: ""
+};
+const blankOrder = {
+  customer_id: "",
+  branch_id: "",
+  tax_rate: 0.18,
+  notes: "",
+  requires_prescription: false,
+  lens_modification_notes: "",
+  prescription: blankPrescription,
+  items: [{ item_id: "", quantity: 1, unit_price: 0 }]
+};
 
 export default function Orders() {
   const { push } = useToast();
   const [open, setOpen] = useState(false);
-  const [form, setForm] = useState({
-    customer_id: "",
-    branch_id: "",
-    tax_rate: 0.18,
-    notes: "",
-    items: [{ item_id: "", quantity: 1, unit_price: 0 }]
-  });
+  const [form, setForm] = useState(blankOrder);
 
   const [q, setQ] = useState("");
   const { data, loading, refetch } = useApi(() => api.get("/orders", { params: { q } }), [q]);
@@ -44,9 +59,11 @@ export default function Orders() {
     doc.text(`Invoice: ${invoice.invoice_number}`, 20, 35);
     doc.text(`Customer: ${invoice.customer_name}`, 20, 45);
     doc.text(`Branch: ${invoice.branch_name}`, 20, 55);
-    doc.text(`Subtotal: $${Number(invoice.subtotal).toFixed(2)}`, 20, 70);
-    doc.text(`Tax: $${Number(invoice.tax_amount).toFixed(2)}`, 20, 80);
-    doc.text(`Total: $${Number(invoice.total_amount).toFixed(2)}`, 20, 90);
+    doc.text(`Logged by: ${invoice.created_by_login_id || invoice.created_by_name || "-"}`, 20, 65);
+    if (invoice.requires_prescription) doc.text("Lens modification: Prescription attached", 20, 75);
+    doc.text(`Subtotal: $${Number(invoice.subtotal).toFixed(2)}`, 20, 90);
+    doc.text(`Tax: $${Number(invoice.tax_amount).toFixed(2)}`, 20, 100);
+    doc.text(`Total: $${Number(invoice.total_amount).toFixed(2)}`, 20, 110);
     doc.save(`${invoice.invoice_number}.pdf`);
   };
 
@@ -55,7 +72,7 @@ export default function Orders() {
     await api.post("/orders", form);
     push("Order and invoice created");
     setOpen(false);
-    setForm({ customer_id: "", branch_id: "", tax_rate: 0.18, notes: "", items: [{ item_id: "", quantity: 1, unit_price: 0 }] });
+    setForm(blankOrder);
     refetch();
   };
 
@@ -97,6 +114,7 @@ export default function Orders() {
               { key: "customer_name", header: "Customer" },
               { key: "branch_name", header: "Branch" },
               { key: "status", header: "Status", render: (row) => <StatusBadge status={row.status} /> },
+              { key: "requires_prescription", header: "Lens work", render: (row) => row.requires_prescription ? "Prescription" : "-" },
               { key: "total_amount", header: "Total", render: (row) => `$${Number(row.total_amount).toFixed(2)}` },
               {
                 key: "change",
@@ -120,6 +138,8 @@ export default function Orders() {
         columns={[
           { key: "invoice_number", header: "Invoice" },
           { key: "customer_name", header: "Customer" },
+          { key: "created_by_login_id", header: "Logged by", render: (row) => row.created_by_login_id || row.created_by_name || "-" },
+          { key: "requires_prescription", header: "Lens work", render: (row) => row.requires_prescription ? "Prescription" : "-" },
           { key: "payment_status", header: "Payment" },
           { key: "total_amount", header: "Total", render: (row) => `$${Number(row.total_amount).toFixed(2)}` },
           {
@@ -206,6 +226,61 @@ export default function Orders() {
           <button type="button" className="btn-secondary" onClick={() => setForm({ ...form, items: [...form.items, { item_id: "", quantity: 1, unit_price: 0 }] })}>
             <Plus size={16} /> Add line
           </button>
+
+          <section className="rounded-lg border border-slate-200 p-4 dark:border-slate-800">
+            <label className="flex items-center gap-3 text-sm font-semibold">
+              <input
+                type="checkbox"
+                checked={form.requires_prescription}
+                onChange={(event) => setForm({ ...form, requires_prescription: event.target.checked })}
+              />
+              Lens modification / prescription required
+            </label>
+
+            {form.requires_prescription && (
+              <div className="mt-4 space-y-4">
+                <div className="grid gap-3 sm:grid-cols-3">
+                  {[
+                    ["right_eye_sph", "Right SPH"],
+                    ["right_eye_cyl", "Right CYL"],
+                    ["right_eye_axis", "Right Axis"],
+                    ["left_eye_sph", "Left SPH"],
+                    ["left_eye_cyl", "Left CYL"],
+                    ["left_eye_axis", "Left Axis"],
+                    ["ipd_near", "IPD Near"],
+                    ["ipd_far", "IPD Far"]
+                  ].map(([field, label]) => (
+                    <label key={field} className="text-sm font-semibold">
+                      {label}
+                      <input
+                        className="input mt-2"
+                        type="number"
+                        step="0.01"
+                        value={form.prescription[field]}
+                        onChange={(event) => setForm({
+                          ...form,
+                          prescription: { ...form.prescription, [field]: event.target.value }
+                        })}
+                      />
+                    </label>
+                  ))}
+                </div>
+                <label className="block text-sm font-semibold">
+                  Lens modification details
+                  <textarea
+                    className="input mt-2"
+                    value={form.lens_modification_notes}
+                    onChange={(event) => setForm({
+                      ...form,
+                      lens_modification_notes: event.target.value,
+                      prescription: { ...form.prescription, notes: event.target.value }
+                    })}
+                    placeholder="Coating, tint, progressive lens, fitting notes, remake details"
+                  />
+                </label>
+              </div>
+            )}
+          </section>
 
           <label className="block text-sm font-semibold">
             Notes

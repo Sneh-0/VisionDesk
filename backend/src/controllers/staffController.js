@@ -5,10 +5,11 @@ import { ApiError } from "../utils/apiError.js";
 import { branchScope, isOwner, normalizeRole } from "../utils/roles.js";
 
 export const listStaff = asyncHandler(async (req, res) => {
-  const branchId = branchScope(req.user);
+  const branchId = isOwner(req.user) ? req.query.branch_id || null : branchScope(req.user);
   const { rows } = await query(
     `SELECT
        s.staff_id,
+       s.login_id,
        s.full_name,
        s.email,
        s.phone,
@@ -27,15 +28,15 @@ export const listStaff = asyncHandler(async (req, res) => {
 });
 
 export const createStaff = asyncHandler(async (req, res) => {
-  const { branch_id, full_name, email, phone, role, password } = req.body;
+  const { branch_id, full_name, login_id, email, phone, role, password } = req.body;
   
   // Check permissions: Branch Admin can only create staff for their branch
   if (!isOwner(req.user)) {
     if (String(branch_id) !== String(req.user.branch_id)) {
       throw new ApiError(403, "You can only create staff for your own branch");
     }
-    if (normalizeRole(role) === "owner") {
-      throw new ApiError(403, "You cannot create an owner account");
+    if (normalizeRole(role) !== "staff") {
+      throw new ApiError(403, "Branch admins can only create staff accounts");
     }
   }
 
@@ -43,15 +44,15 @@ export const createStaff = asyncHandler(async (req, res) => {
   
   try {
     const { rows } = await query(
-      `INSERT INTO staff (branch_id, full_name, email, phone, role, password_hash)
-       VALUES ($1, $2, $3, $4, $5, $6)
-       RETURNING staff_id, full_name, email, phone, role, branch_id, is_active, created_at`,
-      [branch_id, full_name, email, phone, role, hashedPassword]
+      `INSERT INTO staff (branch_id, full_name, login_id, email, phone, role, password_hash)
+       VALUES ($1, $2, $3, $4, $5, $6, $7)
+       RETURNING staff_id, login_id, full_name, email, phone, role, branch_id, is_active, created_at`,
+      [branch_id, full_name, login_id, email, phone, role, hashedPassword]
     );
     res.status(201).json(rows[0]);
   } catch (error) {
     if (error.message?.includes("unique constraint")) {
-      throw new ApiError(400, "Email already exists");
+      throw new ApiError(400, "Login ID already exists");
     }
     throw error;
   }

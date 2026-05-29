@@ -8,5 +8,5 @@ const router = Router();
 router.get("/", listOrders);
 router.post("/", validate(orderSchema), createOrder);
 router.get("/:id", validate(idSchema), getOrder);
-router.patch("/:id/status", authorize("owner"), validate(statusSchema), updateStatus);
+router.patch("/:id/status", authorize("owner", "branch_admin", "staff"), validate(statusSchema), updateStatus);
 export default router;

@@ -5,7 +5,7 @@ import { validate } from "../middleware/validate.js";
 import { inventorySchema } from "../models/schemas.js";
 
 const router = Router();
-router.get("/", listInventory);
-router.put("/", authorize("owner"), validate(inventorySchema), updateInventory);
-router.get("/transactions", transactionHistory);
+router.get("/", authorize("owner", "branch_admin"), listInventory);
+router.put("/", authorize("owner", "branch_admin"), validate(inventorySchema), updateInventory);
+router.get("/transactions", authorize("owner", "branch_admin"), transactionHistory);
 export default router;

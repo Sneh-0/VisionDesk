@@ -34,11 +34,17 @@ export const listOrders = asyncHandler(async (req, res) => {
        c.mobile_no AS customer_id,
        c.mobile_no AS mobile_number,
        b.name AS branch_name,
-       COALESCE(si.total_amount, 0) AS total_amount
+       COALESCE(si.total_amount, 0) AS total_amount,
+       o.medical_history_id,
+       o.lens_modification_notes,
+       CASE WHEN o.medical_history_id IS NULL THEN false ELSE true END AS requires_prescription,
+       creator.login_id AS created_by_login_id,
+       creator.full_name AS created_by_name
      FROM sales_order o
      JOIN customer c ON c.mobile_no=o.mobile_no
      JOIN branch b ON b.branch_id=o.branch_id
      LEFT JOIN sales_invoice si ON si.order_id=o.order_id
+     LEFT JOIN staff creator ON creator.staff_id=o.created_by
      WHERE ($1::order_status IS NULL OR o.status=$1)
        AND ($2::text IS NULL OR o.order_id::text ILIKE '%'||$2||'%' OR c.name ILIKE '%'||$2||'%' OR c.mobile_no ILIKE '%'||$2||'%')
        ${branchClause}
@@ -60,11 +66,17 @@ export const getOrder = asyncHandler(async (req, res) => {
        c.mobile_no AS mobile_number,
        c.email,
        b.name AS branch_name,
-       COALESCE(si.total_amount, 0) AS total_amount
+       COALESCE(si.total_amount, 0) AS total_amount,
+       o.medical_history_id,
+       o.lens_modification_notes,
+       CASE WHEN o.medical_history_id IS NULL THEN false ELSE true END AS requires_prescription,
+       creator.login_id AS created_by_login_id,
+       creator.full_name AS created_by_name
      FROM sales_order o
      JOIN customer c ON c.mobile_no=o.mobile_no
      JOIN branch b ON b.branch_id=o.branch_id
      LEFT JOIN sales_invoice si ON si.order_id=o.order_id
+     LEFT JOIN staff creator ON creator.staff_id=o.created_by
      WHERE o.order_id=$1 ${branchId === null ? "" : "AND o.branch_id=$2"}`,
     orderParams
   );
@@ -94,14 +106,22 @@ export const getOrder = asyncHandler(async (req, res) => {
      WHERE si.order_id=$1 ${branchId === null ? "" : "AND o.branch_id=$2"}`,
     orderParams
   );
-  res.json({ ...order.rows[0], items: items.rows, invoice: invoice.rows[0] || null });
+  const prescription = order.rows[0]?.medical_history_id
+    ? await query(
+        `SELECT record_id AS medical_history_id, *
+         FROM medical_history
+         WHERE record_id=$1`,
+        [order.rows[0].medical_history_id]
+      )
+    : { rows: [] };
+  res.json({ ...order.rows[0], items: items.rows, invoice: invoice.rows[0] || null, prescription: prescription.rows[0] || null });
 });
 
 export const createOrder = asyncHandler(async (req, res) => {
   const client = await pool.connect();
   try {
     await client.query("BEGIN");
-    const { customer_id, branch_id, tax_rate, notes, items } = req.body;
+    const { customer_id, branch_id, tax_rate, notes, items, requires_prescription, prescription, lens_modification_notes } = req.body;
     if (!canAccessBranch(req.user, branch_id)) {
       throw new ApiError(403, "Branch access denied");
     }
@@ -110,19 +130,45 @@ export const createOrder = asyncHandler(async (req, res) => {
     const total = Number((subtotal + taxAmount).toFixed(2));
     const halfTax = Number((taxAmount / 2).toFixed(2));
 
+    let medicalHistoryId = null;
+    if (requires_prescription) {
+      const medical = await client.query(
+        `INSERT INTO medical_history (
+           mobile_no, examined_by, left_eye_sph, left_eye_cyl, left_eye_axis,
+           right_eye_sph, right_eye_cyl, right_eye_axis, ipd_near, ipd_far, notes
+         )
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
+         RETURNING record_id`,
+        [
+          customer_id,
+          req.user.staff_id,
+          prescription?.left_eye_sph ?? null,
+          prescription?.left_eye_cyl ?? null,
+          prescription?.left_eye_axis ?? null,
+          prescription?.right_eye_sph ?? null,
+          prescription?.right_eye_cyl ?? null,
+          prescription?.right_eye_axis ?? null,
+          prescription?.ipd_near ?? null,
+          prescription?.ipd_far ?? null,
+          prescription?.notes || lens_modification_notes || null
+        ]
+      );
+      medicalHistoryId = medical.rows[0].record_id;
+    }
+
     const order = await client.query(
-      `INSERT INTO sales_order (mobile_no,branch_id,status,notes,created_by)
-       VALUES ($1,$2,'confirmed',$3,$4) RETURNING *`,
-      [customer_id, branch_id, notes, req.user.staff_id]
+      `INSERT INTO sales_order (mobile_no,branch_id,status,notes,created_by,medical_history_id,lens_modification_notes)
+       VALUES ($1,$2,'confirmed',$3,$4,$5,$6) RETURNING *`,
+      [customer_id, branch_id, notes, req.user.staff_id, medicalHistoryId, lens_modification_notes || null]
     );
 
     const invoice = await client.query(
       `INSERT INTO sales_invoice (
-         order_id, branch_id, subtotal, cgst_amount, sgst_amount, total_amount, payment_status, created_by
+         order_id, branch_id, mobile_no, subtotal, cgst_amount, sgst_amount, total_amount, payment_status, created_by
        )
-       VALUES ($1,$2,$3,$4,$5,$6,'pending',$7)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,'pending',$8)
        RETURNING invoice_no AS invoice_id, *, (cgst_amount + sgst_amount + igst_amount) AS tax_amount`,
-      [order.rows[0].order_id, branch_id, subtotal, halfTax, halfTax, total, req.user.staff_id]
+      [order.rows[0].order_id, branch_id, customer_id, subtotal, halfTax, halfTax, total, req.user.staff_id]
     );
 
     for (const item of items) {

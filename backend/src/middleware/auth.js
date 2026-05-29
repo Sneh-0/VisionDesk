@@ -6,6 +6,7 @@ import { normalizeRole, roleLabel } from "../utils/roles.js";
 const toApiUser = (staff) => ({
   user_id: staff.staff_id,
   staff_id: staff.staff_id,
+  login_id: staff.login_id,
   name: staff.full_name,
   full_name: staff.full_name,
   email: staff.email,
@@ -24,7 +25,7 @@ export const authenticate = async (req, _res, next) => {
     const token = header.split(" ")[1];
     const payload = jwt.verify(token, process.env.JWT_SECRET);
     const { rows } = await query(
-      "SELECT staff_id, full_name, email, role, branch_id, is_active FROM staff WHERE staff_id = $1",
+      "SELECT staff_id, login_id, full_name, email, role, branch_id, is_active FROM staff WHERE staff_id = $1",
       [payload.userId]
     );
 

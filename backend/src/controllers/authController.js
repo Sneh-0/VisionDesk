@@ -14,6 +14,7 @@ const signToken = (user) => jwt.sign(
 const toApiUser = (staff) => ({
   user_id: staff.staff_id,
   staff_id: staff.staff_id,
+  login_id: staff.login_id,
   name: staff.full_name,
   full_name: staff.full_name,
   email: staff.email,
@@ -25,15 +26,15 @@ const toApiUser = (staff) => ({
 });
 
 export const login = asyncHandler(async (req, res) => {
-  const { email, password } = req.body;
-  const { rows } = await query("SELECT * FROM staff WHERE email = $1 AND is_active = true", [email]);
+  const { login_id, password } = req.body;
+  const { rows } = await query("SELECT * FROM staff WHERE lower(login_id) = lower($1) AND is_active = true", [login_id]);
   const user = rows[0];
 
   const seededPlainPassword = user?.password_hash?.startsWith("$plain$")
     && user.password_hash.replace("$plain$", "") === password;
 
   if (!user || (!seededPlainPassword && !(await bcrypt.compare(password, user.password_hash)))) {
-    throw new ApiError(401, "Invalid email or password");
+    throw new ApiError(401, "Invalid login ID or password");
   }
 
   res.json({

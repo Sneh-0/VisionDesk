@@ -7,6 +7,7 @@ export const listInvoices = asyncHandler(async (req, res) => {
   const { rows } = await query(
     `SELECT
        si.invoice_no AS invoice_id,
+       si.invoice_no AS invoice_number,
        si.*,
        (si.cgst_amount + si.sgst_amount + si.igst_amount) AS tax_amount,
        CASE so.status
@@ -18,11 +19,17 @@ export const listInvoices = asyncHandler(async (req, res) => {
        END AS status,
        c.name AS customer_name,
        c.mobile_no AS mobile_number,
-       b.name AS branch_name
+       b.name AS branch_name,
+       so.medical_history_id,
+       so.lens_modification_notes,
+       CASE WHEN so.medical_history_id IS NULL THEN false ELSE true END AS requires_prescription,
+       creator.login_id AS created_by_login_id,
+       creator.full_name AS created_by_name
      FROM sales_invoice si
      JOIN sales_order so ON so.order_id=si.order_id
      JOIN customer c ON c.mobile_no=so.mobile_no
      JOIN branch b ON b.branch_id=so.branch_id
+     LEFT JOIN staff creator ON creator.staff_id=si.created_by
      ${branchId ? "WHERE so.branch_id = $1" : ""}
      ORDER BY si.invoice_date DESC`
     , branchId ? [branchId] : []
@@ -36,6 +43,7 @@ export const getInvoice = asyncHandler(async (req, res) => {
   const invoice = await query(
     `SELECT
        si.invoice_no AS invoice_id,
+       si.invoice_no AS invoice_number,
        si.*,
        (si.cgst_amount + si.sgst_amount + si.igst_amount) AS tax_amount,
        so.status,
@@ -45,11 +53,17 @@ export const getInvoice = asyncHandler(async (req, res) => {
        c.email,
        concat_ws(', ', c.address_line1, c.address_line2) AS address,
        b.name AS branch_name,
-       concat_ws(', ', b.address_line1, b.address_line2) AS branch_address
+       concat_ws(', ', b.address_line1, b.address_line2) AS branch_address,
+       so.medical_history_id,
+       so.lens_modification_notes,
+       CASE WHEN so.medical_history_id IS NULL THEN false ELSE true END AS requires_prescription,
+       creator.login_id AS created_by_login_id,
+       creator.full_name AS created_by_name
      FROM sales_invoice si
      JOIN sales_order so ON so.order_id=si.order_id
      JOIN customer c ON c.mobile_no=so.mobile_no
      JOIN branch b ON b.branch_id=so.branch_id
+     LEFT JOIN staff creator ON creator.staff_id=si.created_by
      WHERE si.invoice_no=$1 ${branchId ? "AND so.branch_id=$2" : ""}`,
     invoiceParams
   );

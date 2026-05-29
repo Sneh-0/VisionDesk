@@ -1,12 +1,20 @@
 import { z } from "zod";
 
 const idParam = z.object({ id: z.string().min(1) });
+const optionalEmail = z.preprocess(
+  (value) => value === "" ? null : value,
+  z.string().email().optional().nullable()
+);
+const optionalNumber = z.preprocess(
+  (value) => value === "" ? null : value,
+  z.coerce.number().optional().nullable()
+);
 
 export const idSchema = z.object({ params: idParam });
 
 export const loginSchema = z.object({
   body: z.object({
-    email: z.string().email(),
+    login_id: z.string().min(3),
     password: z.string().min(6)
   })
 });
@@ -15,7 +23,7 @@ export const customerSchema = z.object({
   body: z.object({
     name: z.string().min(2),
     mobile_number: z.string().min(7),
-    email: z.string().email().optional().nullable(),
+    email: optionalEmail,
     address: z.string().optional().nullable(),
     loyalty_points: z.coerce.number().int().min(0).default(0)
   })
@@ -67,7 +75,7 @@ export const supplierSchema = z.object({
     name: z.string().min(2),
     contact_person: z.string().optional().nullable(),
     phone: z.string().optional().nullable(),
-    email: z.string().email().optional().nullable(),
+    email: optionalEmail,
     address: z.string().optional().nullable()
   })
 });
@@ -88,6 +96,19 @@ export const orderSchema = z.object({
     branch_id: z.coerce.number().int().positive(),
     tax_rate: z.coerce.number().min(0).max(1).default(0.18),
     notes: z.string().optional().nullable(),
+    requires_prescription: z.coerce.boolean().optional().default(false),
+    lens_modification_notes: z.string().optional().nullable(),
+    prescription: z.object({
+      left_eye_sph: optionalNumber,
+      left_eye_cyl: optionalNumber,
+      left_eye_axis: optionalNumber,
+      right_eye_sph: optionalNumber,
+      right_eye_cyl: optionalNumber,
+      right_eye_axis: optionalNumber,
+      ipd_near: optionalNumber,
+      ipd_far: optionalNumber,
+      notes: z.string().optional().nullable()
+    }).optional().nullable(),
     items: z.array(z.object({
       item_id: z.string().min(1),
       quantity: z.coerce.number().int().positive(),
@@ -108,7 +129,7 @@ export const branchSchema = z.object({
     state: z.string().optional().nullable(),
     pincode: z.string().optional().nullable(),
     phone: z.string().optional().nullable(),
-    email: z.string().email().optional().nullable()
+    email: optionalEmail
   })
 });
 
@@ -116,7 +137,8 @@ export const staffSchema = z.object({
   body: z.object({
     branch_id: z.coerce.number().int().positive(),
     full_name: z.string().min(2),
-    email: z.string().email(),
+    login_id: z.string().min(3),
+    email: optionalEmail,
     phone: z.string().optional().nullable(),
     role: z.enum(["owner", "branch_admin", "staff"]),
     password: z.string().min(6)

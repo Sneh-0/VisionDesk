@@ -7,8 +7,8 @@ import { customerSchema, idSchema, prescriptionSchema } from "../models/schemas.
 const router = Router();
 router.get("/", listCustomers);
 router.post("/", validate(customerSchema), createCustomer);
-router.put("/:id", authorize("owner"), validate(customerSchema), updateCustomer);
-router.delete("/:id", authorize("owner"), validate(idSchema), deleteCustomer);
+router.put("/:id", authorize("owner", "branch_admin"), validate(customerSchema), updateCustomer);
+router.delete("/:id", authorize("owner", "branch_admin"), validate(idSchema), deleteCustomer);
 router.get("/:id/prescriptions", validate(idSchema), getPrescriptionHistory);
 router.post("/:id/prescriptions", validate(prescriptionSchema), addPrescription);
 export default router;

@@ -10,8 +10,8 @@ export function AuthProvider({ children }) {
     return stored ? JSON.parse(stored) : null;
   });
 
-  const login = async (email, password) => {
-    const { data } = await api.post("/auth/login", { email, password });
+  const login = async (loginId, password) => {
+    const { data } = await api.post("/auth/login", { login_id: loginId, password });
     localStorage.setItem("visondesk_token", data.token);
     localStorage.setItem("visondesk_user", JSON.stringify(data.user));
     setToken(data.token);

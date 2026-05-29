@@ -11,10 +11,14 @@ const customerSelect = `
     c.email,
     concat_ws(', ', c.address_line1, c.address_line2) AS address,
     COALESCE(lp.points_earned - lp.points_redeemed, 0) AS loyalty_points,
+    c.created_by,
+    creator.login_id AS created_by_login_id,
+    creator.full_name AS created_by_name,
     c.created_at,
     c.updated_at
   FROM customer c
   LEFT JOIN loyalty_program lp ON lp.mobile_no = c.mobile_no
+  LEFT JOIN staff creator ON creator.staff_id = c.created_by
 `;
 
 export const listCustomers = asyncHandler(async (req, res) => {

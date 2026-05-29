@@ -20,26 +20,43 @@ export default function Sidebar() {
   const visibleLinks = links.filter((link) => link.roles.includes(user?.role));
 
   return (
-    <aside className="fixed inset-y-0 left-0 z-30 hidden w-72 border-r border-slate-200 bg-white px-4 py-5 dark:border-slate-800 dark:bg-slate-950 lg:block">
-      <div className="mb-8 flex items-center gap-3 px-2">
-        <div className="grid h-10 w-10 place-items-center rounded-lg bg-slate-950 text-sm font-bold text-white dark:bg-white dark:text-slate-950">VD</div>
-        <div>
-          <div className="text-lg font-bold tracking-tight">Visondesk</div>
-          <div className="text-xs font-medium text-slate-500">Optical retail CRM</div>
+    <>
+      <aside className="fixed inset-y-0 left-0 z-30 hidden w-72 border-r border-slate-200 bg-white px-4 py-5 dark:border-slate-800 dark:bg-slate-950 lg:block">
+        <div className="mb-8 flex items-center gap-3 px-2">
+          <div className="grid h-10 w-10 place-items-center rounded-lg bg-slate-950 text-sm font-bold text-white dark:bg-white dark:text-slate-950">VD</div>
+          <div>
+            <div className="text-lg font-bold tracking-tight">Visondesk</div>
+            <div className="text-xs font-medium text-slate-500">Optical retail CRM</div>
+          </div>
         </div>
-      </div>
-      <nav className="space-y-1">
-        {visibleLinks.map(({ to, label, icon: Icon }) => (
-          <NavLink
-            key={to}
-            to={to}
-            className={({ isActive }) => `flex items-center gap-3 rounded-md px-3 py-2.5 text-sm font-semibold transition ${isActive ? "bg-slate-950 text-white dark:bg-white dark:text-slate-950" : "text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-900"}`}
-          >
-            <Icon size={18} />
-            {label}
-          </NavLink>
-        ))}
+        <nav className="space-y-1">
+          {visibleLinks.map(({ to, label, icon: Icon }) => (
+            <NavLink
+              key={to}
+              to={to}
+              className={({ isActive }) => `flex items-center gap-3 rounded-md px-3 py-2.5 text-sm font-semibold transition ${isActive ? "bg-slate-950 text-white dark:bg-white dark:text-slate-950" : "text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-900"}`}
+            >
+              <Icon size={18} />
+              {label}
+            </NavLink>
+          ))}
+        </nav>
+      </aside>
+
+      <nav className="fixed inset-x-0 bottom-0 z-30 border-t border-slate-200 bg-white/95 px-2 pb-[max(env(safe-area-inset-bottom),0.5rem)] pt-2 shadow-lg backdrop-blur dark:border-slate-800 dark:bg-slate-950/95 lg:hidden">
+        <div className="flex gap-1 overflow-x-auto">
+          {visibleLinks.map(({ to, label, icon: Icon }) => (
+            <NavLink
+              key={to}
+              to={to}
+              className={({ isActive }) => `flex min-w-20 flex-1 flex-col items-center justify-center gap-1 rounded-md px-2 py-2 text-[11px] font-semibold transition ${isActive ? "bg-slate-950 text-white dark:bg-white dark:text-slate-950" : "text-slate-600 dark:text-slate-300"}`}
+            >
+              <Icon size={18} />
+              <span className="max-w-full truncate">{label}</span>
+            </NavLink>
+          ))}
+        </div>
       </nav>
-    </aside>
+    </>
   );
 }

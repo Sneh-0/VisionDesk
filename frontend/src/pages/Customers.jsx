@@ -50,6 +50,7 @@ export default function Customers() {
             { key: "name", header: "Name" },
             { key: "mobile_number", header: "Mobile" },
             { key: "email", header: "Email" },
+            { key: "created_by_login_id", header: "Logged by", render: (row) => row.created_by_login_id || row.created_by_name || "-" },
             { key: "loyalty_points", header: "Loyalty" },
             { key: "actions", header: "", render: (row) => ["owner", "branch_admin"].includes(user?.role) && <button className="btn-secondary h-9 w-9 px-0" onClick={() => remove(row.customer_id)}><Trash2 size={16} /></button> }
           ]}

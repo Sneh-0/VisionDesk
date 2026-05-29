@@ -6,7 +6,7 @@ import { idSchema, productSchema } from "../models/schemas.js";
 
 const router = Router();
 router.get("/", listProducts);
-router.post("/", authorize("owner"), validate(productSchema), createProduct);
-router.put("/:id", authorize("owner"), validate(productSchema), updateProduct);
-router.delete("/:id", authorize("owner"), validate(idSchema), deleteProduct);
+router.post("/", authorize("owner", "branch_admin"), validate(productSchema), createProduct);
+router.put("/:id", authorize("owner", "branch_admin"), validate(productSchema), updateProduct);
+router.delete("/:id", authorize("owner", "branch_admin"), validate(idSchema), deleteProduct);
 export default router;

@@ -8,7 +8,7 @@ export default function Login() {
   const { login, isAuthenticated } = useAuth();
   const { push } = useToast();
   const navigate = useNavigate();
-  const [form, setForm] = useState({ email: "owner@visiondesk.com", password: "owner123" });
+  const [form, setForm] = useState({ login_id: "owner", password: "owner123" });
   const [loading, setLoading] = useState(false);
 
   if (isAuthenticated) return <Navigate to="/dashboard" replace />;
@@ -17,7 +17,7 @@ export default function Login() {
     event.preventDefault();
     setLoading(true);
     try {
-      await login(form.email, form.password);
+      await login(form.login_id, form.password);
       push("Welcome back to Visondesk");
       navigate("/dashboard");
     } catch (error) {
@@ -49,11 +49,11 @@ export default function Login() {
           <div className="mb-6">
             <div className="mb-3 inline-flex rounded-lg bg-brand-50 p-2 text-brand-700"><Eye size={22} /></div>
             <h2 className="text-2xl font-bold">Sign in</h2>
-            <p className="mt-1 text-sm text-slate-500">Secure JWT authentication with role-based access.</p>
+            <p className="mt-1 text-sm text-slate-500">Use your staff login ID and password.</p>
           </div>
           <label className="mb-4 block text-sm font-semibold">
-            Email
-            <input className="input mt-2" type="email" value={form.email} onChange={(event) => setForm({ ...form, email: event.target.value })} required />
+            Login ID
+            <input className="input mt-2" value={form.login_id} onChange={(event) => setForm({ ...form, login_id: event.target.value })} required autoComplete="username" />
           </label>
           <label className="mb-6 block text-sm font-semibold">
             Password

@@ -33,7 +33,7 @@ export default function Branches() {
 
   return (
     <>
-      <div className="flex items-center justify-between mb-6">
+      <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <PageHeader title="Branch Management" eyebrow="Manage retail locations" />
         <button className="btn btn-primary flex items-center gap-2" onClick={() => setIsModalOpen(true)}>
           <Plus className="h-4 w-4" /> Add Branch
@@ -63,7 +63,7 @@ export default function Branches() {
         loading={loading}
       />
 
-      <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title="Add New Branch">
+      <Modal open={isModalOpen} onClose={() => setIsModalOpen(false)} title="Add New Branch">
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label className="label">Branch Name</label>
@@ -75,7 +75,7 @@ export default function Branches() {
               required
             />
           </div>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid gap-4 sm:grid-cols-2">
             <div>
               <label className="label">Phone</label>
               <input
@@ -104,7 +104,7 @@ export default function Branches() {
               onChange={(e) => setFormData({ ...formData, address: e.target.value })}
             ></textarea>
           </div>
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid gap-4 sm:grid-cols-3">
             <div>
               <label className="label">City</label>
               <input
