@@ -33,6 +33,9 @@ export const authenticate = async (req, _res, next) => {
     req.user = toApiUser(rows[0]);
     next();
   } catch (error) {
+    if (error.name === "TokenExpiredError") {
+      return next(new ApiError(401, "Session expired"));
+    }
     next(error.name === "JsonWebTokenError" ? new ApiError(401, "Invalid token") : error);
   }
 };

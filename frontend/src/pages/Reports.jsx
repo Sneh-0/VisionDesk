@@ -22,7 +22,7 @@ export default function Reports() {
               <XAxis dataKey="branch_name" />
               <YAxis />
               <Tooltip />
-              <Bar dataKey="sales" fill="#2474e8" radius={[6, 6, 0, 0]} />
+              <Bar dataKey="sales" fill="#475569" radius={[6, 6, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
         </div>

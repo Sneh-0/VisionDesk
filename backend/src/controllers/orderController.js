@@ -194,12 +194,12 @@ export const createOrder = asyncHandler(async (req, res) => {
     const pointsEarned = Math.floor(total / 100);
     if (pointsEarned > 0) {
       await client.query(
-        `INSERT INTO loyalty_program (mobile_no, points_earned)
-         VALUES ($1, $2)
+        `INSERT INTO loyalty_program (mobile_no, points_earned, tier)
+         VALUES ($1, $2, $3)
          ON CONFLICT (mobile_no) DO UPDATE
          SET points_earned = loyalty_program.points_earned + EXCLUDED.points_earned,
              last_updated = NOW()`,
-        [customer_id, pointsEarned]
+        [customer_id, pointsEarned, pointsEarned >= 5000 ? "platinum" : pointsEarned >= 2000 ? "gold" : "silver"]
       );
       await client.query(
         `INSERT INTO loyalty_transaction (mobile_no, txn_type, points, reference_id, note, created_by)

@@ -7,7 +7,7 @@ import StatCard from "../components/StatCard";
 import DataTable from "../components/DataTable";
 import StatusBadge from "../components/StatusBadge";
 
-const COLORS = ["#2474e8", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6", "#ec4899"];
+const COLORS = ["#334155", "#475569", "#64748b", "#78716c", "#52525b", "#6b7280"];
 
 export default function OwnerDashboard() {
   const { data, loading, error } = useApi(() => api.get("/dashboard/owner"), []);
@@ -36,8 +36,8 @@ export default function OwnerDashboard() {
                 <YAxis />
                 <Tooltip />
                 <Legend />
-                <Bar dataKey="total_sales" name="Sales ($)" fill="#2474e8" radius={[4, 4, 0, 0]} />
-                <Bar dataKey="order_count" name="Orders" fill="#10b981" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="total_sales" name="Sales ($)" fill="#475569" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="order_count" name="Orders" fill="#71717a" radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </div>
@@ -88,7 +88,7 @@ export default function OwnerDashboard() {
 
         <section className="card p-5">
           <h2 className="mb-5 text-lg font-bold flex items-center gap-2">
-            <TrendingUp className="h-5 w-5 text-blue-500" />
+            <TrendingUp className="h-5 w-5 text-slate-500" />
             Recent Global Orders
           </h2>
           <DataTable
@@ -100,6 +100,25 @@ export default function OwnerDashboard() {
               { key: "total_amount", header: "Amount", render: (row) => money(row.total_amount) }
             ]}
             rows={data.recent_orders}
+          />
+        </section>
+      </div>
+
+      <div className="mt-6">
+        <section className="card p-5">
+          <h2 className="mb-5 flex items-center gap-2 text-lg font-bold">
+            <AlertTriangle className="h-5 w-5 text-red-500" />
+            Low Stock Items
+          </h2>
+          <DataTable
+            columns={[
+              { key: "branch_name", header: "Branch" },
+              { key: "item_name", header: "Product" },
+              { key: "stock_level", header: "In Stock" },
+              { key: "reorder_level", header: "Reorder Limit" }
+            ]}
+            rows={data.low_stock}
+            empty="No low stock items right now"
           />
         </section>
       </div>

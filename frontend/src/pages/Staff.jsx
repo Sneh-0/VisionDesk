@@ -93,7 +93,7 @@ export default function Staff() {
           )},
           { key: "login_id", header: "Login ID" },
           { key: "role", header: "Role", render: (row) => (
-            <span className="capitalize px-2 py-1 bg-blue-50 text-blue-700 rounded text-xs font-medium dark:bg-blue-900/20 dark:text-blue-400">
+            <span className="capitalize px-2 py-1 bg-slate-100 text-slate-700 rounded text-xs font-medium dark:bg-slate-900/40 dark:text-slate-300">
               {row.role.replace('_', ' ')}
             </span>
           )},

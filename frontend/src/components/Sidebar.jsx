@@ -1,6 +1,7 @@
 import { NavLink } from "react-router-dom";
-import { BarChart3, Boxes, Building2, ClipboardList, Contact, Gauge, Package, Settings, Truck, Users } from "lucide-react";
+import { BarChart3, Boxes, Building2, ClipboardList, Contact, Gauge, Package, Settings, Sparkles, Truck, Users } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
+import BrandLogo from "./BrandLogo";
 
 const links = [
   { to: "/dashboard", label: "Dashboard", icon: Gauge, roles: ["owner", "branch_admin", "staff"] },
@@ -21,20 +22,17 @@ export default function Sidebar() {
 
   return (
     <>
-      <aside className="fixed inset-y-0 left-0 z-30 hidden w-72 border-r border-slate-200 bg-white px-4 py-5 dark:border-slate-800 dark:bg-slate-950 lg:block">
-        <div className="mb-8 flex items-center gap-3 px-2">
-          <div className="grid h-10 w-10 place-items-center rounded-lg bg-slate-950 text-sm font-bold text-white dark:bg-white dark:text-slate-950">VD</div>
-          <div>
-            <div className="text-lg font-bold tracking-tight">Visondesk</div>
-            <div className="text-xs font-medium text-slate-500">Optical retail CRM</div>
-          </div>
+      <aside className="fixed inset-y-0 left-0 z-30 hidden w-72 overflow-hidden border-r border-slate-200/80 bg-white/90 px-4 py-5 shadow-xl shadow-slate-200/30 backdrop-blur-xl dark:border-slate-800 dark:bg-slate-950/90 dark:shadow-none lg:block">
+        <div className="pointer-events-none absolute inset-x-0 top-0 h-36 bg-gradient-to-br from-slate-200/80 via-zinc-200/45 to-transparent dark:from-slate-800/40 dark:via-zinc-800/30" />
+        <div className="relative mb-7 overflow-hidden rounded-2xl border border-slate-200 bg-white/70 px-2 shadow-sm dark:border-slate-700 dark:bg-slate-900/70">
+          <BrandLogo className="h-[116px] w-full" />
         </div>
-        <nav className="space-y-1">
+        <nav className="relative space-y-1">
           {visibleLinks.map(({ to, label, icon: Icon }) => (
             <NavLink
               key={to}
               to={to}
-              className={({ isActive }) => `flex items-center gap-3 rounded-md px-3 py-2.5 text-sm font-semibold transition ${isActive ? "bg-slate-950 text-white dark:bg-white dark:text-slate-950" : "text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-900"}`}
+              className={({ isActive }) => `flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold transition ${isActive ? "bg-gradient-to-r from-slate-700 to-zinc-700 text-white shadow-md shadow-slate-700/20" : "text-slate-600 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-slate-900 dark:hover:text-slate-100"}`}
             >
               <Icon size={18} />
               {label}
@@ -49,7 +47,7 @@ export default function Sidebar() {
             <NavLink
               key={to}
               to={to}
-              className={({ isActive }) => `flex min-w-20 flex-1 flex-col items-center justify-center gap-1 rounded-md px-2 py-2 text-[11px] font-semibold transition ${isActive ? "bg-slate-950 text-white dark:bg-white dark:text-slate-950" : "text-slate-600 dark:text-slate-300"}`}
+              className={({ isActive }) => `flex min-w-20 flex-1 flex-col items-center justify-center gap-1 rounded-xl px-2 py-2 text-[11px] font-semibold transition ${isActive ? "bg-gradient-to-r from-slate-700 to-zinc-700 text-white shadow-md" : "text-slate-600 dark:text-slate-300"}`}
             >
               <Icon size={18} />
               <span className="max-w-full truncate">{label}</span>

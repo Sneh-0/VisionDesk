@@ -117,6 +117,14 @@ export const orderSchema = z.object({
   })
 });
 
+export const paymentSchema = z.object({
+  body: z.object({
+    payment_method: z.enum(["cash", "card", "upi"]),
+    loyalty_points: z.coerce.number().int().min(0).default(0),
+    notes: z.string().optional().nullable()
+  })
+});
+
 export const statusSchema = z.object({
   body: z.object({ status: z.enum(["Pending", "In Progress", "Ready", "Delivered"]) })
 });

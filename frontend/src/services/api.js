@@ -4,6 +4,16 @@ const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL || "http://localhost:5000/api"
 });
 
+export const clearStoredSession = () => {
+  localStorage.removeItem("visondesk_token");
+  localStorage.removeItem("visondesk_user");
+};
+
+export const notifySessionExpired = () => {
+  clearStoredSession();
+  window.dispatchEvent(new Event("visiondesk:session-expired"));
+};
+
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem("visondesk_token");
   if (token) config.headers.Authorization = `Bearer ${token}`;
@@ -16,9 +26,7 @@ api.interceptors.response.use(
     const message = error.response?.data?.message || error.message || "An unexpected error occurred";
     
     if (error.response?.status === 401) {
-      localStorage.removeItem("visondesk_token");
-      localStorage.removeItem("visondesk_user");
-      // Optional: window.location.href = "/login";
+      notifySessionExpired();
     }
     
     console.error(`[API Error] ${error.config?.method?.toUpperCase()} ${error.config?.url}:`, message);

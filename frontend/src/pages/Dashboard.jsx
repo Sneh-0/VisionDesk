@@ -38,15 +38,15 @@ export default function Dashboard() {
               <AreaChart data={data.sales_chart}>
                 <defs>
                   <linearGradient id="sales" x1="0" x2="0" y1="0" y2="1">
-                    <stop offset="5%" stopColor="#2474e8" stopOpacity={0.35} />
-                    <stop offset="95%" stopColor="#2474e8" stopOpacity={0.02} />
+                    <stop offset="5%" stopColor="#475569" stopOpacity={0.35} />
+                    <stop offset="95%" stopColor="#475569" stopOpacity={0.02} />
                   </linearGradient>
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
                 <XAxis dataKey="label" />
                 <YAxis />
                 <Tooltip />
-                <Area type="monotone" dataKey="sales" stroke="#2474e8" fill="url(#sales)" strokeWidth={3} />
+                <Area type="monotone" dataKey="sales" stroke="#475569" fill="url(#sales)" strokeWidth={3} />
               </AreaChart>
             </ResponsiveContainer>
           </div>
@@ -66,6 +66,33 @@ export default function Dashboard() {
           </div>
         </section>
       </div>
+
+      <div className="mt-6">
+        <section className="card p-5">
+          <h2 className="mb-5 flex items-center gap-2 text-lg font-bold">
+            <AlertTriangle className="h-5 w-5 text-red-500" />
+            Low Stock Items
+          </h2>
+          <DataTable
+            columns={[
+              { key: "name", header: "Product" },
+              { key: "branch_name", header: "Branch" },
+              { key: "quantity", header: "In Stock" },
+              { key: "reorder_level", header: "Reorder Limit" },
+              {
+                key: "alert",
+                header: "Alert",
+                render: (row) => (
+                  <span className="font-bold text-red-600">{row.quantity <= row.reorder_level ? "Low stock" : "Healthy"}</span>
+                )
+              }
+            ]}
+            rows={data.low_stock}
+            empty="No low stock items right now"
+          />
+        </section>
+      </div>
+
       <div className="mt-6">
         <DataTable
           columns={[

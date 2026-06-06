@@ -1,6 +1,7 @@
-import { Download, Plus, Printer, Trash2 } from "lucide-react";
+import { Download, Plus, Trash2 } from "lucide-react";
 import jsPDF from "jspdf";
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import SearchBar from "../components/SearchBar";
 import DataTable from "../components/DataTable";
 import Modal from "../components/Modal";
@@ -35,6 +36,7 @@ const blankOrder = {
 
 export default function Orders() {
   const { push } = useToast();
+  const navigate = useNavigate();
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState(blankOrder);
 
@@ -54,7 +56,9 @@ export default function Orders() {
   const downloadInvoice = (invoice) => {
     const doc = new jsPDF();
     doc.setFontSize(18);
-    doc.text("Visondesk Invoice", 20, 20);
+    doc.text("VisionDesk Invoice", 20, 20);
+    doc.setFontSize(9);
+    doc.text("INVENTORY & SALES PLATFORM", 20, 26);
     doc.setFontSize(11);
     doc.text(`Invoice: ${invoice.invoice_number}`, 20, 35);
     doc.text(`Customer: ${invoice.customer_name}`, 20, 45);
@@ -69,11 +73,11 @@ export default function Orders() {
 
   const createOrder = async (event) => {
     event.preventDefault();
-    await api.post("/orders", form);
+    const { data } = await api.post("/orders", form);
     push("Order and invoice created");
     setOpen(false);
     setForm(blankOrder);
-    refetch();
+    navigate(`/orders/${data.invoice.invoice_id}/payment`);
   };
 
   const setItem = (index, patch) => {
@@ -92,9 +96,6 @@ export default function Orders() {
           <>
             <button className="btn-primary" onClick={() => setOpen(true)}>
               <Plus size={17} /> Create order
-            </button>
-            <button className="btn-secondary" onClick={() => window.print()}>
-              <Printer size={17} /> Print
             </button>
           </>
         )}
@@ -140,7 +141,20 @@ export default function Orders() {
           { key: "customer_name", header: "Customer" },
           { key: "created_by_login_id", header: "Logged by", render: (row) => row.created_by_login_id || row.created_by_name || "-" },
           { key: "requires_prescription", header: "Lens work", render: (row) => row.requires_prescription ? "Prescription" : "-" },
-          { key: "payment_status", header: "Payment" },
+          {
+            key: "payment_status",
+            header: "Payment",
+            render: (row) => (
+              <button
+                type="button"
+                className="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-700 transition hover:bg-slate-200 hover:text-slate-900 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-slate-100"
+                onClick={() => navigate(`/orders/${row.invoice_id}/payment`)}
+                title="Open payment method"
+              >
+                {row.payment_status || "Pending"}
+              </button>
+            )
+          },
           { key: "total_amount", header: "Total", render: (row) => `$${Number(row.total_amount).toFixed(2)}` },
           {
             key: "download",

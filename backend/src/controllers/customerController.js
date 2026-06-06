@@ -11,6 +11,7 @@ const customerSelect = `
     c.email,
     concat_ws(', ', c.address_line1, c.address_line2) AS address,
     COALESCE(lp.points_earned - lp.points_redeemed, 0) AS loyalty_points,
+    COALESCE(lp.tier::text, 'basic') AS loyalty_tier,
     c.created_by,
     creator.login_id AS created_by_login_id,
     creator.full_name AS created_by_name,
@@ -42,8 +43,12 @@ export const createCustomer = asyncHandler(async (req, res) => {
        RETURNING *
      ),
      loyalty AS (
-       INSERT INTO loyalty_program (mobile_no, points_earned)
-       SELECT mobile_no, $6 FROM created
+       INSERT INTO loyalty_program (mobile_no, points_earned, tier)
+       SELECT mobile_no, $6, CASE
+         WHEN $6 >= 5000 THEN 'platinum'
+         WHEN $6 >= 2000 THEN 'gold'
+         ELSE 'silver'
+       END FROM created
        ON CONFLICT (mobile_no) DO NOTHING
      )
      SELECT
@@ -54,6 +59,7 @@ export const createCustomer = asyncHandler(async (req, res) => {
      FROM created`,
     [mobile_number, name, email, address, req.user?.staff_id || null, loyalty_points || 0]
   );
+  await query("CALL sp_update_loyalty_tier($1)", [mobile_number]);
   res.status(201).json(rows[0]);
 });
 
@@ -62,13 +68,17 @@ export const updateCustomer = asyncHandler(async (req, res) => {
   const { rows } = await query(
     `WITH updated AS (
        UPDATE customer
-       SET mobile_no=$1, name=$2, email=$3, address_line1=$4, updated_at=NOW()
+       SET mobile_no=$1, name=$2, email=$3, address_line1=$4, updated_by=$6, updated_at=NOW()
        WHERE mobile_no=$5
        RETURNING *
      ),
      loyalty AS (
-       INSERT INTO loyalty_program (mobile_no, points_earned)
-       SELECT mobile_no, $6 FROM updated
+       INSERT INTO loyalty_program (mobile_no, points_earned, tier)
+       SELECT mobile_no, $7, CASE
+         WHEN $7 >= 5000 THEN 'platinum'
+         WHEN $7 >= 2000 THEN 'gold'
+         ELSE 'silver'
+       END FROM updated
        ON CONFLICT (mobile_no) DO UPDATE
        SET points_earned = GREATEST(EXCLUDED.points_earned, loyalty_program.points_redeemed),
            last_updated = NOW()
@@ -77,10 +87,11 @@ export const updateCustomer = asyncHandler(async (req, res) => {
        updated.mobile_no AS customer_id,
        updated.mobile_no AS mobile_number,
        updated.*,
-       $6::int AS loyalty_points
+       $7::int AS loyalty_points
      FROM updated`,
-    [mobile_number, name, email, address, req.params.id, loyalty_points || 0]
+    [mobile_number, name, email, address, req.params.id, req.user?.staff_id || null, loyalty_points || 0]
   );
+  await query("CALL sp_update_loyalty_tier($1)", [mobile_number]);
   res.json(rows[0]);
 });
 

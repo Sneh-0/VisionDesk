@@ -1,6 +1,9 @@
 import { supabaseQuery as query } from "../config/supabase.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
+import { ApiError } from "../utils/apiError.js";
 import { branchScope } from "../utils/roles.js";
+
+const LOYALTY_POINT_VALUE = 0.0001;
 
 export const listInvoices = asyncHandler(async (req, res) => {
   const branchId = branchScope(req.user);
@@ -9,6 +12,8 @@ export const listInvoices = asyncHandler(async (req, res) => {
        si.invoice_no AS invoice_id,
        si.invoice_no AS invoice_number,
        si.*,
+       COALESCE(si.discount, 0) AS discount,
+       GREATEST(si.total_amount - COALESCE(si.discount, 0), 0) AS payable_amount,
        (si.cgst_amount + si.sgst_amount + si.igst_amount) AS tax_amount,
        CASE so.status
          WHEN 'confirmed' THEN 'Pending'
@@ -45,6 +50,8 @@ export const getInvoice = asyncHandler(async (req, res) => {
        si.invoice_no AS invoice_id,
        si.invoice_no AS invoice_number,
        si.*,
+       COALESCE(si.discount, 0) AS discount,
+       GREATEST(si.total_amount - COALESCE(si.discount, 0), 0) AS payable_amount,
        (si.cgst_amount + si.sgst_amount + si.igst_amount) AS tax_amount,
        so.status,
        so.notes,
@@ -57,12 +64,14 @@ export const getInvoice = asyncHandler(async (req, res) => {
        so.medical_history_id,
        so.lens_modification_notes,
        CASE WHEN so.medical_history_id IS NULL THEN false ELSE true END AS requires_prescription,
+       COALESCE(lp.points_earned - lp.points_redeemed, 0) AS loyalty_points_available,
        creator.login_id AS created_by_login_id,
        creator.full_name AS created_by_name
      FROM sales_invoice si
      JOIN sales_order so ON so.order_id=si.order_id
      JOIN customer c ON c.mobile_no=so.mobile_no
      JOIN branch b ON b.branch_id=so.branch_id
+     LEFT JOIN loyalty_program lp ON lp.mobile_no = so.mobile_no
      LEFT JOIN staff creator ON creator.staff_id=si.created_by
      WHERE si.invoice_no=$1 ${branchId ? "AND so.branch_id=$2" : ""}`,
     invoiceParams
@@ -84,4 +93,68 @@ export const getInvoice = asyncHandler(async (req, res) => {
     [req.params.id]
   );
   res.json({ ...invoice.rows[0], items: items.rows });
+});
+
+export const updatePayment = asyncHandler(async (req, res) => {
+  const branchId = branchScope(req.user);
+  const invoiceParams = branchId ? [req.params.id, branchId] : [req.params.id];
+  const existing = await query(
+    `SELECT
+       si.invoice_no,
+       si.order_id,
+       si.branch_id,
+       si.mobile_no,
+       si.total_amount,
+       COALESCE(si.discount, 0) AS discount,
+       COALESCE(lp.points_earned - lp.points_redeemed, 0) AS loyalty_points_available
+     FROM sales_invoice si
+     JOIN sales_order so ON so.order_id = si.order_id
+     LEFT JOIN loyalty_program lp ON lp.mobile_no = si.mobile_no
+     WHERE si.invoice_no = $1 ${branchId ? "AND so.branch_id = $2" : ""}`,
+    invoiceParams
+  );
+
+  const invoice = existing.rows[0];
+  if (!invoice) {
+    throw new ApiError(404, "Invoice not found");
+  }
+
+  const requestedPoints = Number(req.body.loyalty_points || 0);
+  if (requestedPoints > invoice.loyalty_points_available) {
+    throw new ApiError(400, "Not enough loyalty points available");
+  }
+
+  const loyaltyDiscount = Math.min(Number((Number(invoice.total_amount) * requestedPoints * LOYALTY_POINT_VALUE).toFixed(2)), Number(invoice.total_amount));
+  const paymentMethod = req.body.payment_method;
+
+  const update = await query(
+    `UPDATE sales_invoice
+     SET discount = $2,
+         payment_status = 'paid',
+         payment_method = $3
+     WHERE invoice_no = $1
+     RETURNING invoice_no AS invoice_id, invoice_no AS invoice_number, *,
+       COALESCE(discount, 0) AS discount,
+       GREATEST(total_amount - COALESCE(discount, 0), 0) AS payable_amount`,
+    [invoice.invoice_no, loyaltyDiscount, paymentMethod]
+  );
+
+  if (requestedPoints > 0) {
+    await query(
+      `INSERT INTO loyalty_program (mobile_no, points_redeemed)
+       VALUES ($1, $2)
+       ON CONFLICT (mobile_no) DO UPDATE
+       SET points_redeemed = loyalty_program.points_redeemed + EXCLUDED.points_redeemed,
+           last_updated = NOW()`,
+      [invoice.mobile_no, requestedPoints]
+    );
+
+    await query(
+      `INSERT INTO loyalty_transaction (mobile_no, txn_type, points, reference_id, note, created_by)
+       VALUES ($1, 'redeem', $2, $3, $4, $5)`,
+      [invoice.mobile_no, requestedPoints, `Invoice #${invoice.invoice_no}`, `Redeemed loyalty points during payment for Invoice #${invoice.invoice_no}`, req.user.staff_id]
+    );
+  }
+
+  res.json(update.rows[0]);
 });
