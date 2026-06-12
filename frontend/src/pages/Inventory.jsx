@@ -13,7 +13,7 @@ export default function Inventory() {
 
   return (
     <>
-      <PageHeader title="Inventory" eyebrow="Branch stock and reorder levels" />
+      <PageHeader title="Inventory" eyebrow="Branch Stock Levels" />
       {loading ? <div className="card p-6">Loading inventory...</div> : (
         <>
           <div className="mb-3 flex justify-end"><SearchBar value={q} onChange={setQ} placeholder="Search inventory" /></div>

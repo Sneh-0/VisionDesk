@@ -1,4 +1,4 @@
-import { Plus } from "lucide-react";
+import { Plus, Printer } from "lucide-react";
 import { useState } from "react";
 import DataTable from "../components/DataTable";
 import Modal from "../components/Modal";
@@ -26,9 +26,29 @@ export default function Products() {
     refetch();
   };
 
+  const printBarcode = (barcode) => {
+    const printWindow = window.open("", "_blank");
+    printWindow.document.write(`
+      <html>
+        <head><title>Print Barcode</title></head>
+        <body style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; font-family: sans-serif;">
+          <div style="border: 2px solid black; padding: 20px; text-align: center;">
+            <div style="font-size: 14px; font-weight: bold; margin-bottom: 10px;">VisionDesk</div>
+            <div style="font-family: 'Libre Barcode 39', cursive; font-size: 48px;">*${barcode}*</div>
+            <div style="font-size: 16px; letter-spacing: 2px; margin-top: 5px;">${barcode}</div>
+          </div>
+          <script>
+            window.onload = function() { window.print(); window.close(); }
+          </script>
+        </body>
+      </html>
+    `);
+    printWindow.document.close();
+  };
+
   return (
     <>
-      <PageHeader title="Products" eyebrow="Frames, lenses, barcode catalog" actions={<button className="btn-primary" onClick={() => setOpen(true)}><Plus size={17} /> Add product</button>} />
+      <PageHeader title="Products" eyebrow="Product Catalog" actions={<button className="btn-primary" onClick={() => setOpen(true)}><Plus size={17} /> Add product</button>} />
       <div className="mb-4"><SearchBar value={search} onChange={setSearch} placeholder="Search SKU, barcode, brand" /></div>
       {loading ? <div className="card p-6">Loading products...</div> : (
         <DataTable
@@ -39,7 +59,12 @@ export default function Products() {
             { key: "brand", header: "Brand" },
             { key: "color", header: "Color" },
             { key: "price", header: "Price", render: (row) => `$${Number(row.price).toFixed(2)}` },
-            { key: "reorder_level", header: "Reorder" }
+            { key: "reorder_level", header: "Reorder" },
+            { key: "barcode_print", header: "Label", render: (row) => (
+              <button onClick={() => printBarcode(row.barcode_no || row.sku)} className="text-blue-600 hover:text-blue-800 flex items-center gap-1">
+                <Printer size={16} /> Print
+              </button>
+            )}
           ]}
           rows={data?.data || []}
         />

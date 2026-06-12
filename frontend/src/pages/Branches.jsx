@@ -34,7 +34,7 @@ export default function Branches() {
   return (
     <>
       <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <PageHeader title="Branch Management" eyebrow="Manage retail locations" />
+        <PageHeader title="Branch Management" eyebrow="Corporate Infrastructure" />
         <button className="btn btn-primary flex items-center gap-2" onClick={() => setIsModalOpen(true)}>
           <Plus className="h-4 w-4" /> Add Branch
         </button>

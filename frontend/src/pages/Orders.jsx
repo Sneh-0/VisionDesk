@@ -91,7 +91,7 @@ export default function Orders() {
     <>
       <PageHeader
         title="Orders"
-        eyebrow="Delivery tracking and invoice workflow"
+        eyebrow="Order & Invoice Management"
         actions={(
           <>
             <button className="btn-primary" onClick={() => setOpen(true)}>

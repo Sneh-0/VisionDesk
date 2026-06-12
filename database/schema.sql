@@ -276,6 +276,9 @@ CREATE TABLE IF NOT EXISTS loyalty_transaction (
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+-- Ensure reference_id is VARCHAR to support string references
+ALTER TABLE loyalty_transaction ALTER COLUMN reference_id TYPE VARCHAR(50);
+
 ALTER TABLE loyalty_transaction ADD COLUMN IF NOT EXISTS mobile_no VARCHAR(15);
 DO $$
 BEGIN
@@ -417,6 +420,9 @@ CREATE TABLE IF NOT EXISTS stock_transaction (
   created_by INT REFERENCES staff(staff_id),
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+
+-- Ensure reference_id is VARCHAR to support string references
+ALTER TABLE stock_transaction ALTER COLUMN reference_id TYPE VARCHAR(50);
 
 ALTER TABLE stock_transaction ADD COLUMN IF NOT EXISTS branch_id INT REFERENCES branch(branch_id);
 ALTER TABLE stock_transaction ADD COLUMN IF NOT EXISTS barcode_no VARCHAR(60) REFERENCES item(barcode_no);
@@ -580,7 +586,71 @@ CREATE TABLE IF NOT EXISTS invoice_item (
   line_total DECIMAL(12,2) NOT NULL
 );
 
-ALTER TABLE invoice_item ADD COLUMN IF NOT EXISTS invoice_no INT REFERENCES sales_invoice(invoice_no) ON DELETE CASCADE;
+-- Audit Logs Table
+CREATE TABLE IF NOT EXISTS audit_logs (
+    log_id BIGSERIAL PRIMARY KEY,
+    staff_id INT REFERENCES staff(staff_id),
+    action VARCHAR(100) NOT NULL,
+    entity_type VARCHAR(50) NOT NULL,
+    entity_id VARCHAR(100),
+    old_values JSONB,
+    new_values JSONB,
+    ip_address VARCHAR(45),
+    user_agent TEXT,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Expenses Table
+CREATE TABLE IF NOT EXISTS expense (
+    expense_id SERIAL PRIMARY KEY,
+    branch_id INT NOT NULL REFERENCES branch(branch_id),
+    category VARCHAR(100) NOT NULL,
+    amount DECIMAL(12,2) NOT NULL,
+    description TEXT,
+    expense_date DATE NOT NULL DEFAULT CURRENT_DATE,
+    paid_to VARCHAR(150),
+    payment_method VARCHAR(50),
+    created_by INT REFERENCES staff(staff_id),
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Stock Transfer Table
+CREATE TABLE IF NOT EXISTS stock_transfer (
+    transfer_id SERIAL PRIMARY KEY,
+    from_branch_id INT NOT NULL REFERENCES branch(branch_id),
+    to_branch_id INT NOT NULL REFERENCES branch(branch_id),
+    status VARCHAR(50) NOT NULL DEFAULT 'pending',
+    notes TEXT,
+    created_by INT REFERENCES staff(staff_id),
+    received_by INT REFERENCES staff(staff_id),
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS stock_transfer_item (
+    transfer_item_id BIGSERIAL PRIMARY KEY,
+    transfer_id INT NOT NULL REFERENCES stock_transfer(transfer_id) ON DELETE CASCADE,
+    barcode_no VARCHAR(60) NOT NULL REFERENCES item(barcode_no),
+    quantity INT NOT NULL CHECK (quantity > 0)
+);
+
+-- System Settings Table
+CREATE TABLE IF NOT EXISTS settings (
+    key VARCHAR(100) PRIMARY KEY,
+    value JSONB NOT NULL,
+    description TEXT,
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Add triggers for updated_at
+DROP TRIGGER IF EXISTS expense_timestamp ON expense;
+CREATE TRIGGER expense_timestamp BEFORE UPDATE ON expense FOR EACH ROW EXECUTE FUNCTION update_timestamp();
+DROP TRIGGER IF EXISTS stock_transfer_timestamp ON stock_transfer;
+CREATE TRIGGER stock_transfer_timestamp BEFORE UPDATE ON stock_transfer FOR EACH ROW EXECUTE FUNCTION update_timestamp();
+
+ALTER TABLE sales_invoice ADD COLUMN IF NOT EXISTS order_id INT REFERENCES sales_order(order_id);
+
 ALTER TABLE invoice_item ADD COLUMN IF NOT EXISTS barcode_no VARCHAR(60) REFERENCES item(barcode_no);
 ALTER TABLE invoice_item ADD COLUMN IF NOT EXISTS quantity INT NOT NULL DEFAULT 1;
 ALTER TABLE invoice_item ADD COLUMN IF NOT EXISTS unit_price DECIMAL(10,2) NOT NULL DEFAULT 0;
@@ -799,3 +869,12 @@ JOIN (VALUES
   ('Demo customer flow order - Meera', 'VD-FR-1001', 1, 4299.00, 5072.82),
   ('Demo customer flow order - Meera', 'VD-LN-2002', 1, 5899.00, 6960.82)
 ) AS seed(order_notes, barcode_no, quantity, unit_price, line_total) ON seed.order_notes = so.notes;
+
+INSERT INTO settings (key, value, description)
+VALUES 
+('gst_rate', '18', 'Global GST rate percentage'),
+('loyalty_conversion_ratio', '0.01', 'Loyalty points earned per currency unit spent (e.g. 1 point per $100)'),
+('loyalty_point_value', '1.0', 'Value of 1 loyalty point in currency (e.g. 1 point = $1)'),
+('store_logo', '"/logo.png"', 'Path to store logo'),
+('store_name', '"VisionDesk"', 'Store name for invoices')
+ON CONFLICT (key) DO NOTHING;

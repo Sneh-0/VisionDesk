@@ -2,8 +2,7 @@ import { supabaseQuery as query } from "../config/supabase.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { ApiError } from "../utils/apiError.js";
 import { branchScope } from "../utils/roles.js";
-
-const LOYALTY_POINT_VALUE = 0.0001;
+import { notifyPointsEarned } from "../utils/notifications.js";
 
 export const listInvoices = asyncHandler(async (req, res) => {
   const branchId = branchScope(req.user);
@@ -124,7 +123,11 @@ export const updatePayment = asyncHandler(async (req, res) => {
     throw new ApiError(400, "Not enough loyalty points available");
   }
 
-  const loyaltyDiscount = Math.min(Number((Number(invoice.total_amount) * requestedPoints * LOYALTY_POINT_VALUE).toFixed(2)), Number(invoice.total_amount));
+  // Get point value from settings
+  const pointValueResult = await query("SELECT value FROM settings WHERE key = 'loyalty_point_value'");
+  const pointValue = Number(pointValueResult.rows[0]?.value || 1.0);
+
+  const loyaltyDiscount = Math.min(Number((requestedPoints * pointValue).toFixed(2)), Number(invoice.total_amount));
   const paymentMethod = req.body.payment_method;
 
   const update = await query(
@@ -139,21 +142,47 @@ export const updatePayment = asyncHandler(async (req, res) => {
     [invoice.invoice_no, loyaltyDiscount, paymentMethod]
   );
 
-  if (requestedPoints > 0) {
+  // Process Loyalty Points (Earning and Redeeming)
+  const ratioResult = await query("SELECT value FROM settings WHERE key = 'loyalty_conversion_ratio'");
+  const conversionRatio = Number(ratioResult.rows[0]?.value || 0.1);
+  const pointsEarned = Math.floor(Number(update.rows[0].payable_amount) * conversionRatio);
+
+  if (pointsEarned > 0 || requestedPoints > 0) {
     await query(
-      `INSERT INTO loyalty_program (mobile_no, points_redeemed)
-       VALUES ($1, $2)
+      `INSERT INTO loyalty_program (mobile_no, points_earned, points_redeemed)
+       VALUES ($1, $2, $3)
        ON CONFLICT (mobile_no) DO UPDATE
-       SET points_redeemed = loyalty_program.points_redeemed + EXCLUDED.points_redeemed,
+       SET points_earned = loyalty_program.points_earned + EXCLUDED.points_earned,
+           points_redeemed = loyalty_program.points_redeemed + EXCLUDED.points_redeemed,
            last_updated = NOW()`,
-      [invoice.mobile_no, requestedPoints]
+      [invoice.mobile_no, pointsEarned, requestedPoints]
     );
 
-    await query(
-      `INSERT INTO loyalty_transaction (mobile_no, txn_type, points, reference_id, note, created_by)
-       VALUES ($1, 'redeem', $2, $3, $4, $5)`,
-      [invoice.mobile_no, requestedPoints, `Invoice #${invoice.invoice_no}`, `Redeemed loyalty points during payment for Invoice #${invoice.invoice_no}`, req.user.staff_id]
-    );
+    if (pointsEarned > 0) {
+      await query(
+        `INSERT INTO loyalty_transaction (mobile_no, txn_type, points, reference_id, note, created_by)
+         VALUES ($1, 'earn', $2, $3, $4, $5)`,
+        [invoice.mobile_no, pointsEarned, `Invoice #${invoice.invoice_no}`, `Earned from payment of Invoice #${invoice.invoice_no}`, req.user.staff_id]
+      );
+    }
+
+    if (requestedPoints > 0) {
+      await query(
+        `INSERT INTO loyalty_transaction (mobile_no, txn_type, points, reference_id, note, created_by)
+         VALUES ($1, 'redeem', $2, $3, $4, $5)`,
+        [invoice.mobile_no, requestedPoints, `Invoice #${invoice.invoice_no}`, `Redeemed loyalty points during payment for Invoice #${invoice.invoice_no}`, req.user.staff_id]
+      );
+    }
+
+    await query("CALL sp_update_loyalty_tier($1)", [invoice.mobile_no]);
+
+    // Send notification for points earned
+    if (pointsEarned > 0) {
+      const customerResult = await query("SELECT name FROM customer WHERE mobile_no = $1", [invoice.mobile_no]);
+      if (customerResult.rows[0]) {
+        notifyPointsEarned(customerResult.rows[0].name, invoice.mobile_no, pointsEarned).catch(console.error);
+      }
+    }
   }
 
   res.json(update.rows[0]);

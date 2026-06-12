@@ -18,7 +18,7 @@ export default function OwnerDashboard() {
 
   return (
     <>
-      <PageHeader title="Executive Overview" eyebrow="All Branches Analytics" />
+      <PageHeader title="Administrative Dashboard" eyebrow="Branch Performance Analytics" />
       
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-2">
         <StatCard label="Total Revenue (All Time)" value={money(data.stats.total_revenue)} icon={DollarSign} tone="green" />

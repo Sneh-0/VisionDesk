@@ -64,7 +64,7 @@ export default function Customers() {
     <>
       <PageHeader
         title="Customers"
-        eyebrow="Profiles and prescriptions"
+        eyebrow="Customer Profiles"
         actions={<button className="btn-primary" onClick={addCustomer}><Plus size={17} /> Add customer</button>}
       />
       <div className="mb-4"><SearchBar value={search} onChange={setSearch} placeholder="Search by mobile, name, or email" /></div>

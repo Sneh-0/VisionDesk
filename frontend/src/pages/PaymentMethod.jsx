@@ -55,6 +55,10 @@ export default function PaymentMethod() {
 
   const savePayment = async (event) => {
     event.preventDefault();
+
+    const confirmed = window.confirm("Payment complete?");
+    if (!confirmed) return;
+
     setSaving(true);
     try {
       await api.patch(`/invoices/${invoiceId}/payment`, {

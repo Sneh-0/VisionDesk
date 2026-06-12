@@ -30,7 +30,7 @@ export default function Suppliers() {
 
   return (
     <>
-      <PageHeader title="Suppliers" eyebrow="Vendor details and supply records" actions={<button className="btn-primary" onClick={() => setOpen(true)}><Plus size={17} /> Add supplier</button>} />
+      <PageHeader title="Suppliers" eyebrow="Supplier Management" actions={<button className="btn-primary" onClick={() => setOpen(true)}><Plus size={17} /> Add supplier</button>} />
       {loading ? <div className="card p-6">Loading suppliers...</div> : (
         <>
           <div className="mb-3 flex justify-end"><SearchBar value={q} onChange={setQ} placeholder="Search suppliers" /></div>

@@ -2,6 +2,7 @@ import { supabasePool as pool, supabaseQuery as query } from "../config/supabase
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { ApiError } from "../utils/apiError.js";
 import { branchScope, canAccessBranch } from "../utils/roles.js";
+import { notifyOrderReady } from "../utils/notifications.js";
 
 const toDbStatus = (status = "Pending") => ({
   Pending: "confirmed",
@@ -191,24 +192,6 @@ export const createOrder = asyncHandler(async (req, res) => {
       );
     }
 
-    const pointsEarned = Math.floor(total / 100);
-    if (pointsEarned > 0) {
-      await client.query(
-        `INSERT INTO loyalty_program (mobile_no, points_earned, tier)
-         VALUES ($1, $2, $3)
-         ON CONFLICT (mobile_no) DO UPDATE
-         SET points_earned = loyalty_program.points_earned + EXCLUDED.points_earned,
-             last_updated = NOW()`,
-        [customer_id, pointsEarned, pointsEarned >= 5000 ? "platinum" : pointsEarned >= 2000 ? "gold" : "silver"]
-      );
-      await client.query(
-        `INSERT INTO loyalty_transaction (mobile_no, txn_type, points, reference_id, note, created_by)
-         VALUES ($1, 'earn', $2, $3, $4, $5)`,
-        [customer_id, pointsEarned, order.rows[0].order_id, `Earned from Order #${order.rows[0].order_id}`, req.user.staff_id]
-      );
-      await client.query("CALL sp_update_loyalty_tier($1)", [customer_id]);
-    }
-
     await client.query("COMMIT");
     res.status(201).json({ order: order.rows[0], invoice: invoice.rows[0] });
   } catch (error) {
@@ -220,11 +203,13 @@ export const createOrder = asyncHandler(async (req, res) => {
 });
 
 export const updateStatus = asyncHandler(async (req, res) => {
-  const { rows: currentRows } = await query("SELECT branch_id FROM sales_order WHERE order_id=$1", [req.params.id]);
+  const { rows: currentRows } = await query("SELECT branch_id, mobile_no FROM sales_order WHERE order_id=$1", [req.params.id]);
   if (!currentRows[0]) throw new ApiError(404, "Order not found");
+  
   if (!canAccessBranch(req.user, currentRows[0].branch_id)) {
     throw new ApiError(403, "Branch access denied");
   }
+
   const { rows } = await query(
     `UPDATE sales_order SET status=$1, updated_at=NOW(), updated_by=$3
      WHERE order_id=$2
@@ -237,5 +222,14 @@ export const updateStatus = asyncHandler(async (req, res) => {
      END AS status`,
     [toDbStatus(req.body.status), req.params.id, req.user.staff_id]
   );
+
+  // Send notification if ready
+  if (rows[0] && rows[0].status === "Ready") {
+    const customerResult = await query("SELECT name FROM customer WHERE mobile_no = $1", [currentRows[0].mobile_no]);
+    if (customerResult.rows[0]) {
+      notifyOrderReady(customerResult.rows[0].name, currentRows[0].mobile_no, req.params.id).catch(console.error);
+    }
+  }
+
   res.json(rows[0]);
 });

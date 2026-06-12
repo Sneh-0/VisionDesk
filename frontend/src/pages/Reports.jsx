@@ -12,7 +12,7 @@ export default function Reports() {
 
   return (
     <>
-      <PageHeader title="Reports" eyebrow="Sales and branch analytics" />
+      <PageHeader title="Reports" eyebrow="Financial & Operational Reports" />
       <section className="card mb-6 p-5">
         <h2 className="mb-5 text-lg font-bold">Branch sales</h2>
         <div className="h-72">

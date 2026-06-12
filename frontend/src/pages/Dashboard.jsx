@@ -23,7 +23,7 @@ export default function Dashboard() {
 
   return (
     <>
-      <PageHeader title="Command center" eyebrow="Today at a glance" />
+      <PageHeader title="Dashboard" eyebrow="Daily Summary" />
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard label="Total sales today" value={money(data.cards.total_sales_today)} icon={DollarSign} tone="green" />
         <StatCard label="Total customers" value={data.cards.total_customers} icon={Users} />

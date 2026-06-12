@@ -60,7 +60,7 @@ export default function Staff() {
   return (
     <>
       <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <PageHeader title="Staff Management" eyebrow="Manage user access and roles" />
+        <PageHeader title="Staff Management" eyebrow="Personnel & Access Control" />
         <button className="btn btn-primary flex items-center gap-2" onClick={() => setIsModalOpen(true)}>
           <Plus className="h-4 w-4" /> Add User
         </button>
