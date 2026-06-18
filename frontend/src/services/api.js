@@ -1,7 +1,8 @@
 import axios from "axios";
 
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || "http://localhost:5000/api"
+  baseURL: import.meta.env.VITE_API_URL || (import.meta.env.DEV ? "http://localhost:5000/api" : "/api"),
+  timeout: 15000
 });
 
 export const clearStoredSession = () => {
@@ -29,7 +30,9 @@ api.interceptors.response.use(
       notifySessionExpired();
     }
     
-    console.error(`[API Error] ${error.config?.method?.toUpperCase()} ${error.config?.url}:`, message);
+    if (import.meta.env.DEV) {
+      console.error(`[API Error] ${error.config?.method?.toUpperCase()} ${error.config?.url}:`, message);
+    }
     
     // Attach the cleaned message to the error object for easier access in components
     error.apiMessage = message;

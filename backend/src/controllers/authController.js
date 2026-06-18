@@ -33,6 +33,10 @@ export const login = asyncHandler(async (req, res) => {
   const seededPlainPassword = user?.password_hash?.startsWith("$plain$")
     && user.password_hash.replace("$plain$", "") === password;
 
+  if (seededPlainPassword && process.env.ALLOW_PLAIN_SEEDED_PASSWORDS !== "true") {
+    throw new ApiError(401, "Invalid login ID or password");
+  }
+
   if (!user || (!seededPlainPassword && !(await bcrypt.compare(password, user.password_hash)))) {
     throw new ApiError(401, "Invalid login ID or password");
   }
