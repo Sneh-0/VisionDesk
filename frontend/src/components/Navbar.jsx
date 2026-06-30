@@ -12,7 +12,7 @@ export default function Navbar() {
   }, [dark]);
 
   return (
-    <header className="sticky top-0 z-20 border-b border-slate-200/80 bg-white/75 backdrop-blur-xl dark:border-slate-800 dark:bg-slate-950/75">
+    <header className="sticky top-0 z-20 border-b border-slate-200 bg-white/90 backdrop-blur dark:border-slate-800 dark:bg-slate-950/90">
       <div className="mx-auto flex max-w-[1600px] items-center justify-between gap-3 px-4 py-3 sm:px-6 sm:py-4 lg:px-8">
         <div className="relative hidden min-w-80 md:block">
           <Search className="pointer-events-none absolute left-3 top-2.5 text-slate-400" size={18} />
@@ -26,8 +26,8 @@ export default function Navbar() {
           <button className="btn-secondary h-10 w-10 px-0" onClick={() => setDark((value) => !value)} aria-label="Toggle dark mode">
             {dark ? <Sun size={18} /> : <Moon size={18} />}
           </button>
-          <div className="hidden items-center gap-3 rounded-xl border border-slate-200 bg-white/70 px-3 py-1.5 shadow-sm dark:border-slate-800 dark:bg-slate-900/80 sm:flex">
-            <div className="grid h-8 w-8 place-items-center rounded-lg bg-gradient-to-br from-slate-100 to-zinc-100 text-slate-700 dark:from-slate-900 dark:to-zinc-900 dark:text-slate-200"><UserRound size={16} /></div>
+          <div className="hidden items-center gap-3 rounded-xl border border-slate-200 bg-white px-3 py-1.5 shadow-sm dark:border-slate-800 dark:bg-slate-900 sm:flex">
+            <div className="grid h-8 w-8 place-items-center rounded-lg bg-brand-600 text-white"><UserRound size={16} /></div>
             <div className="text-right">
               <div className="text-sm font-semibold">{user?.name}</div>
               <div className="text-xs capitalize text-slate-500">{user?.role_label || user?.role}</div>

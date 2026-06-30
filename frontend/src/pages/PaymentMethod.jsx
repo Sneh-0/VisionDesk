@@ -98,16 +98,17 @@ export default function PaymentMethod() {
 
       <div className="grid gap-6 lg:grid-cols-[1.15fr_0.85fr]">
         <section className="card space-y-5 p-6">
-          <div className="rounded-2xl bg-gradient-to-br from-slate-100 via-white to-zinc-100 p-5 dark:from-slate-800/50 dark:via-slate-950 dark:to-zinc-800/40">
-            <div className="flex flex-wrap items-start justify-between gap-4">
+          <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-brand-700 to-brand-900 p-5 text-white">
+            <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(255,255,255,0.12),transparent_50%)]" />
+            <div className="relative flex flex-wrap items-start justify-between gap-4">
               <div>
-                <p className="text-xs font-bold uppercase tracking-[0.18em] text-slate-600 dark:text-slate-300">Invoice {invoice.invoice_number}</p>
-                <h2 className="mt-1 text-2xl font-bold text-slate-950 dark:text-white">{invoice.customer_name}</h2>
-                <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">{invoice.branch_name}</p>
+                <p className="text-xs font-bold uppercase tracking-[0.18em] text-brand-200">Invoice {invoice.invoice_number}</p>
+                <h2 className="mt-1 text-2xl font-bold text-white">{invoice.customer_name}</h2>
+                <p className="mt-1 text-sm text-brand-200">{invoice.branch_name}</p>
               </div>
-              <div className="rounded-2xl border border-white/70 bg-white px-4 py-3 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">Amount due</p>
-                <p className="mt-1 text-2xl font-bold text-slate-950 dark:text-white">{money(netPayable)}</p>
+              <div className="rounded-2xl border border-white/20 bg-white/10 px-4 py-3 backdrop-blur-sm">
+                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-brand-200">Amount due</p>
+                <p className="mt-1 text-2xl font-bold text-white">{money(netPayable)}</p>
               </div>
             </div>
           </div>

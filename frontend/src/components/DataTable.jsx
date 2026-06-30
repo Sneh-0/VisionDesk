@@ -3,7 +3,7 @@ export default function DataTable({ columns, rows = [], empty = "No records foun
     <div className="card overflow-hidden">
       <div className="overflow-x-auto">
         <table className="w-full min-w-[720px] divide-y divide-slate-200 text-sm dark:divide-slate-800">
-          <thead className="bg-gradient-to-r from-slate-50 to-slate-100/80 dark:from-slate-900 dark:to-slate-800/40">
+          <thead className="bg-slate-50 dark:bg-slate-900/60">
             <tr>
               {columns.map((column) => (
                 <th key={column.key} className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wide text-slate-500">{column.header}</th>
