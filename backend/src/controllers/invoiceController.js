@@ -1,4 +1,4 @@
-import { supabaseQuery as query } from "../config/supabase.js";
+import { supabasePool, supabaseQuery as query } from "../config/supabase.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { ApiError } from "../utils/apiError.js";
 import { branchScope } from "../utils/roles.js";
@@ -95,15 +95,21 @@ export const getInvoice = asyncHandler(async (req, res) => {
 });
 
 export const updatePayment = asyncHandler(async (req, res) => {
+  const client = await supabasePool.connect();
+
+  try {
+    await client.query("BEGIN");
+
   const branchId = branchScope(req.user);
   const invoiceParams = branchId ? [req.params.id, branchId] : [req.params.id];
-  const existing = await query(
+  const existing = await client.query(
     `SELECT
        si.invoice_no,
        si.order_id,
        si.branch_id,
        si.mobile_no,
        si.total_amount,
+       si.payment_status,
        COALESCE(si.discount, 0) AS discount,
        COALESCE(lp.points_earned - lp.points_redeemed, 0) AS loyalty_points_available
      FROM sales_invoice si
@@ -118,19 +124,23 @@ export const updatePayment = asyncHandler(async (req, res) => {
     throw new ApiError(404, "Invoice not found");
   }
 
+  if (invoice.payment_status === "paid") {
+    throw new ApiError(409, "Invoice is already paid");
+  }
+
   const requestedPoints = Number(req.body.loyalty_points || 0);
   if (requestedPoints > invoice.loyalty_points_available) {
     throw new ApiError(400, "Not enough loyalty points available");
   }
 
   // Get point value from settings
-  const pointValueResult = await query("SELECT value FROM settings WHERE key = 'loyalty_point_value'");
+  const pointValueResult = await client.query("SELECT value FROM settings WHERE key = 'loyalty_point_value'");
   const pointValue = Number(pointValueResult.rows[0]?.value || 1.0);
 
   const loyaltyDiscount = Math.min(Number((requestedPoints * pointValue).toFixed(2)), Number(invoice.total_amount));
   const paymentMethod = req.body.payment_method;
 
-  const update = await query(
+  const update = await client.query(
     `UPDATE sales_invoice
      SET discount = $2,
          payment_status = 'paid',
@@ -143,12 +153,12 @@ export const updatePayment = asyncHandler(async (req, res) => {
   );
 
   // Process Loyalty Points (Earning and Redeeming)
-  const ratioResult = await query("SELECT value FROM settings WHERE key = 'loyalty_conversion_ratio'");
+  const ratioResult = await client.query("SELECT value FROM settings WHERE key = 'loyalty_conversion_ratio'");
   const conversionRatio = Number(ratioResult.rows[0]?.value || 0.1);
   const pointsEarned = Math.floor(Number(update.rows[0].payable_amount) * conversionRatio);
 
   if (pointsEarned > 0 || requestedPoints > 0) {
-    await query(
+    await client.query(
       `INSERT INTO loyalty_program (mobile_no, points_earned, points_redeemed)
        VALUES ($1, $2, $3)
        ON CONFLICT (mobile_no) DO UPDATE
@@ -159,7 +169,7 @@ export const updatePayment = asyncHandler(async (req, res) => {
     );
 
     if (pointsEarned > 0) {
-      await query(
+      await client.query(
         `INSERT INTO loyalty_transaction (mobile_no, txn_type, points, reference_id, note, created_by)
          VALUES ($1, 'earn', $2, $3, $4, $5)`,
         [invoice.mobile_no, pointsEarned, `Invoice #${invoice.invoice_no}`, `Earned from payment of Invoice #${invoice.invoice_no}`, req.user.staff_id]
@@ -167,23 +177,31 @@ export const updatePayment = asyncHandler(async (req, res) => {
     }
 
     if (requestedPoints > 0) {
-      await query(
+      await client.query(
         `INSERT INTO loyalty_transaction (mobile_no, txn_type, points, reference_id, note, created_by)
          VALUES ($1, 'redeem', $2, $3, $4, $5)`,
         [invoice.mobile_no, requestedPoints, `Invoice #${invoice.invoice_no}`, `Redeemed loyalty points during payment for Invoice #${invoice.invoice_no}`, req.user.staff_id]
       );
     }
 
-    await query("CALL sp_update_loyalty_tier($1)", [invoice.mobile_no]);
+    await client.query("CALL sp_update_loyalty_tier($1)", [invoice.mobile_no]);
 
     // Send notification for points earned
     if (pointsEarned > 0) {
-      const customerResult = await query("SELECT name FROM customer WHERE mobile_no = $1", [invoice.mobile_no]);
+      const customerResult = await client.query("SELECT name FROM customer WHERE mobile_no = $1", [invoice.mobile_no]);
       if (customerResult.rows[0]) {
         notifyPointsEarned(customerResult.rows[0].name, invoice.mobile_no, pointsEarned).catch(console.error);
       }
     }
   }
 
+  await client.query("COMMIT");
   res.json(update.rows[0]);
+  } catch (error) {
+    await client.query("ROLLBACK");
+    console.error(`Failed to update payment for invoice ${req.params.id}:`, error);
+    throw error;
+  } finally {
+    client.release();
+  }
 });

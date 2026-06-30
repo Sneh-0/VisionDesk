@@ -34,6 +34,8 @@ const blankOrder = {
   items: [{ item_id: "", quantity: 1, unit_price: 0 }]
 };
 
+const isPaidInvoice = (invoice) => invoice?.payment_status?.toLowerCase() === "paid";
+
 export default function Orders() {
   const { push } = useToast();
   const navigate = useNavigate();
@@ -144,16 +146,28 @@ export default function Orders() {
           {
             key: "payment_status",
             header: "Payment",
-            render: (row) => (
-              <button
-                type="button"
-                className="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-700 transition hover:bg-slate-200 hover:text-slate-900 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-slate-100"
-                onClick={() => navigate(`/orders/${row.invoice_id}/payment`)}
-                title="Open payment method"
-              >
-                {row.payment_status || "Pending"}
-              </button>
-            )
+            render: (row) => {
+              const paid = isPaidInvoice(row);
+
+              if (paid) {
+                return (
+                  <span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-bold text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300">
+                    Paid
+                  </span>
+                );
+              }
+
+              return (
+                <button
+                  type="button"
+                  className="rounded-full bg-amber-100 px-3 py-1 text-xs font-bold text-amber-800 transition hover:bg-amber-200 hover:text-amber-900 dark:bg-amber-950/40 dark:text-amber-200 dark:hover:bg-amber-900/60"
+                  onClick={() => navigate(`/orders/${row.invoice_id}/payment`)}
+                  title="Open payment method"
+                >
+                  {row.payment_status || "Pending"}
+                </button>
+              );
+            }
           },
           { key: "total_amount", header: "Total", render: (row) => `$${Number(row.total_amount).toFixed(2)}` },
           {

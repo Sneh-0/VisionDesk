@@ -39,6 +39,7 @@ export default function PaymentMethod() {
   const [loyaltyPoints, setLoyaltyPoints] = useState(0);
   const [saving, setSaving] = useState(false);
 
+  const isPaid = invoice?.payment_status?.toLowerCase() === "paid";
   const availablePoints = Number(invoice?.loyalty_points_available || 0);
   const payableAmount = Number(invoice?.payable_amount ?? invoice?.total_amount ?? 0);
   const loyaltyRate = useMemo(() => {
@@ -55,6 +56,11 @@ export default function PaymentMethod() {
 
   const savePayment = async (event) => {
     event.preventDefault();
+
+    if (isPaid) {
+      push("Invoice is already paid", "error");
+      return;
+    }
 
     const confirmed = window.confirm("Payment complete?");
     if (!confirmed) return;
@@ -190,9 +196,11 @@ export default function PaymentMethod() {
           </div>
 
           <form className="card p-5" onSubmit={savePayment}>
-            <p className="text-sm font-semibold text-slate-600 dark:text-slate-300">Confirm the selected payment method to close the invoice.</p>
-            <button className="btn-primary mt-5 w-full" disabled={saving}>
-              {saving ? "Saving payment..." : `Continue with ${methods.find((method) => method.id === selectedMethod)?.label}`}
+            <p className="text-sm font-semibold text-slate-600 dark:text-slate-300">
+              {isPaid ? "This invoice is already closed as paid." : "Confirm the selected payment method to close the invoice."}
+            </p>
+            <button className="btn-primary mt-5 w-full" disabled={saving || isPaid}>
+              {isPaid ? "Payment complete" : saving ? "Saving payment..." : `Continue with ${methods.find((method) => method.id === selectedMethod)?.label}`}
             </button>
           </form>
         </aside>
