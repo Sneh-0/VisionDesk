@@ -39,6 +39,13 @@ export function AuthProvider({ children }) {
     return data.user;
   };
 
+  const refreshUser = async () => {
+    const { data } = await api.get("/auth/me");
+    localStorage.setItem("visondesk_user", JSON.stringify(data.user));
+    setUser(data.user);
+    return data.user;
+  };
+
   const logout = () => {
     clearStoredSession();
     setToken(null);
@@ -67,7 +74,7 @@ export function AuthProvider({ children }) {
     return () => window.clearTimeout(timer);
   }, [token]);
 
-  const value = useMemo(() => ({ token, user, login, logout, isAuthenticated: Boolean(token) }), [token, user]);
+  const value = useMemo(() => ({ token, user, login, logout, refreshUser, isAuthenticated: Boolean(token) }), [token, user]);
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 

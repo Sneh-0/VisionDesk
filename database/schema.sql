@@ -113,6 +113,9 @@ ALTER TABLE staff ADD COLUMN IF NOT EXISTS role VARCHAR(50) NOT NULL DEFAULT 'st
 ALTER TABLE staff ADD COLUMN IF NOT EXISTS is_active BOOLEAN NOT NULL DEFAULT TRUE;
 ALTER TABLE staff ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 ALTER TABLE staff ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+-- When TRUE the account holder must set their own password at next login. Set on account
+-- creation and on owner-initiated resets so an admin's temporary password can't be reused silently.
+ALTER TABLE staff ADD COLUMN IF NOT EXISTS must_change_password BOOLEAN NOT NULL DEFAULT FALSE;
 
 DO $$
 DECLARE

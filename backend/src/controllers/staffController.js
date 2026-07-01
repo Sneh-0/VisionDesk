@@ -44,8 +44,8 @@ export const createStaff = asyncHandler(async (req, res) => {
   
   try {
     const { rows } = await query(
-      `INSERT INTO staff (branch_id, full_name, login_id, email, phone, role, password_hash)
-       VALUES ($1, $2, $3, $4, $5, $6, $7)
+      `INSERT INTO staff (branch_id, full_name, login_id, email, phone, role, password_hash, must_change_password)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, TRUE)
        RETURNING staff_id, login_id, full_name, email, phone, role, branch_id, is_active, created_at`,
       [branch_id, full_name, login_id, email, phone, role, hashedPassword]
     );
@@ -74,4 +74,22 @@ export const updateStaffStatus = asyncHandler(async (req, res) => {
     [is_active, id]
   );
   res.json(rows[0]);
+});
+
+export const resetStaffPassword = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const { new_password } = req.body;
+
+  // Route is owner-only; this guard is a defensive backstop against misrouting.
+  if (!isOwner(req.user)) throw new ApiError(403, "Only the owner can reset passwords");
+
+  const { rows: staffRows } = await query("SELECT staff_id FROM staff WHERE staff_id = $1", [id]);
+  if (!staffRows[0]) throw new ApiError(404, "Staff not found");
+
+  const hashedPassword = await bcrypt.hash(new_password, 10);
+  // Force the holder to set their own secret at next login — the owner's temp password can't linger.
+  await query("UPDATE staff SET password_hash = $1, must_change_password = TRUE WHERE staff_id = $2", [hashedPassword, id]);
+
+  // Never echo the password back — the audit middleware persists this response as new_values.
+  res.json({ id, staff_id: id, message: "Password reset successfully" });
 });

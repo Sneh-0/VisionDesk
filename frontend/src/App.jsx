@@ -1,6 +1,7 @@
 import { lazy, Suspense } from "react";
 import { Navigate, Route, Routes } from "react-router-dom";
 import ProtectedRoute from "./components/ProtectedRoute";
+import PasswordChangeGate from "./components/PasswordChangeGate";
 import AppLayout from "./components/AppLayout";
 
 const Dashboard = lazy(() => import("./pages/Dashboard"));
@@ -15,6 +16,7 @@ const Settings = lazy(() => import("./pages/Settings"));
 const Login = lazy(() => import("./pages/Login"));
 const Branches = lazy(() => import("./pages/Branches"));
 const Staff = lazy(() => import("./pages/Staff"));
+const ForcePasswordChange = lazy(() => import("./pages/ForcePasswordChange"));
 
 export default function App() {
   return (
@@ -22,6 +24,8 @@ export default function App() {
       <Routes>
         <Route path="/login" element={<Login />} />
         <Route element={<ProtectedRoute />}>
+          <Route path="/force-password" element={<ForcePasswordChange />} />
+          <Route element={<PasswordChangeGate />}>
           <Route element={<AppLayout />}>
             <Route index element={<Navigate to="/dashboard" replace />} />
             <Route path="/dashboard" element={<Dashboard />} />
@@ -35,6 +39,7 @@ export default function App() {
             <Route path="/branches" element={<ProtectedRoute allowedRoles={["owner"]}><Branches /></ProtectedRoute>} />
             <Route path="/staff" element={<ProtectedRoute allowedRoles={["owner", "branch_admin"]}><Staff /></ProtectedRoute>} />
             <Route path="/settings" element={<ProtectedRoute allowedRoles={["owner", "branch_admin"]}><Settings /></ProtectedRoute>} />
+          </Route>
           </Route>
         </Route>
       </Routes>

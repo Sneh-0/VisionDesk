@@ -1,14 +1,16 @@
 import { useState } from "react";
-import { Plus, User, ToggleLeft, ToggleRight } from "lucide-react";
+import { Plus, User, ToggleLeft, ToggleRight, KeyRound } from "lucide-react";
 import api from "../services/api";
 import { useApi } from "../hooks/useApi";
 import { useAuth } from "../context/AuthContext";
+import { useToast } from "../context/ToastContext";
 import PageHeader from "../components/PageHeader";
 import DataTable from "../components/DataTable";
 import Modal from "../components/Modal";
 
 export default function Staff() {
   const { user } = useAuth();
+  const { push } = useToast();
   const isOwner = user?.role === "owner";
   const [selectedBranch, setSelectedBranch] = useState("");
   const { data: staff, loading, refetch } = useApi(
@@ -54,6 +56,33 @@ export default function Staff() {
       refetch();
     } catch (err) {
       alert("Failed to update status");
+    }
+  };
+
+  const [resetTarget, setResetTarget] = useState(null);
+  const [resetForm, setResetForm] = useState({ new_password: "", confirm_password: "" });
+  const [resetting, setResetting] = useState(false);
+
+  const openReset = (row) => {
+    setResetTarget(row);
+    setResetForm({ new_password: "", confirm_password: "" });
+  };
+
+  const submitReset = async (e) => {
+    e.preventDefault();
+    if (resetForm.new_password !== resetForm.confirm_password) {
+      push("Passwords do not match", "error");
+      return;
+    }
+    setResetting(true);
+    try {
+      await api.patch(`/staff/${resetTarget.staff_id}/password`, { new_password: resetForm.new_password });
+      push(`Password reset for ${resetTarget.full_name}`);
+      setResetTarget(null);
+    } catch (err) {
+      push(err.apiMessage || "Failed to reset password", "error");
+    } finally {
+      setResetting(false);
     }
   };
 
@@ -106,6 +135,15 @@ export default function Staff() {
                 <><ToggleLeft className="h-6 w-6 text-slate-400" /> <span className="text-sm text-slate-500">Inactive</span></>
               )}
             </button>
+          )},
+          { key: "actions", header: "Actions", render: (row) => (
+            isOwner ? (
+              <button onClick={() => openReset(row)} className="btn-secondary h-9 px-3 text-xs">
+                <KeyRound className="h-4 w-4" /> Reset password
+              </button>
+            ) : (
+              <span className="text-xs text-slate-400">—</span>
+            )
           )}
         ]}
         rows={staff || []}
@@ -199,6 +237,45 @@ export default function Staff() {
           <div className="flex justify-end gap-3 mt-6">
             <button type="button" className="btn btn-ghost" onClick={() => setIsModalOpen(false)}>Cancel</button>
             <button type="submit" className="btn btn-primary">Create User</button>
+          </div>
+        </form>
+      </Modal>
+
+      <Modal open={!!resetTarget} onClose={() => setResetTarget(null)} title="Reset password">
+        <form onSubmit={submitReset} className="space-y-4">
+          <p className="text-sm text-slate-500">
+            Set a new password for <span className="font-semibold text-slate-700 dark:text-slate-200">{resetTarget?.full_name}</span> ({resetTarget?.login_id}).
+            They can change it themselves later from Settings.
+          </p>
+          <div>
+            <label className="label">New password</label>
+            <input
+              type="password"
+              className="input"
+              value={resetForm.new_password}
+              onChange={(e) => setResetForm({ ...resetForm, new_password: e.target.value })}
+              required
+              minLength={6}
+              autoComplete="new-password"
+            />
+          </div>
+          <div>
+            <label className="label">Confirm new password</label>
+            <input
+              type="password"
+              className="input"
+              value={resetForm.confirm_password}
+              onChange={(e) => setResetForm({ ...resetForm, confirm_password: e.target.value })}
+              required
+              minLength={6}
+              autoComplete="new-password"
+            />
+          </div>
+          <div className="flex justify-end gap-3 mt-6">
+            <button type="button" className="btn btn-ghost" onClick={() => setResetTarget(null)}>Cancel</button>
+            <button type="submit" className="btn btn-primary" disabled={resetting}>
+              {resetting ? "Resetting…" : "Reset password"}
+            </button>
           </div>
         </form>
       </Modal>

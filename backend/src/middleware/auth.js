@@ -14,7 +14,8 @@ const toApiUser = (staff) => ({
   role_label: roleLabel(staff.role),
   staff_role: normalizeRole(staff.role),
   branch_id: staff.branch_id,
-  is_active: staff.is_active
+  is_active: staff.is_active,
+  must_change_password: Boolean(staff.must_change_password)
 });
 
 export const authenticate = async (req, _res, next) => {
@@ -25,7 +26,7 @@ export const authenticate = async (req, _res, next) => {
     const token = header.split(" ")[1];
     const payload = jwt.verify(token, process.env.JWT_SECRET);
     const { rows } = await query(
-      "SELECT staff_id, login_id, full_name, email, role, branch_id, is_active FROM staff WHERE staff_id = $1",
+      "SELECT staff_id, login_id, full_name, email, role, branch_id, is_active, must_change_password FROM staff WHERE staff_id = $1",
       [payload.userId]
     );
 

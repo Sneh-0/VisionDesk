@@ -4,26 +4,40 @@ export default {
   theme: {
     extend: {
       colors: {
-        ink: "#0b1020",
-        slatepanel: "#f6f7fb",
-        // Brand = indigo/violet, aligned with the VisionDesk logo (#4f46e5)
+        ink: "#0c1512",
+        slatepanel: "#f7f9f8",
+        // Brand = deep "optic teal" — clarity / vision, not the default AI indigo.
         brand: {
-          50: "#eef2ff",
-          100: "#e0e7ff",
-          200: "#c7d2fe",
-          300: "#a5b4fc",
-          400: "#818cf8",
-          500: "#6366f1",
-          600: "#4f46e5",
-          700: "#4338ca",
-          800: "#3730a3",
-          900: "#312e81",
-          950: "#1e1b4b"
+          50: "#f0fdfa",
+          100: "#ccfbf1",
+          200: "#99f6e4",
+          300: "#5eead4",
+          400: "#2dd4bf",
+          500: "#14b8a6",
+          600: "#0f766e",
+          700: "#115e59",
+          800: "#134e4a",
+          900: "#0f3f3a",
+          950: "#042f2e"
+        },
+        // Accent = warm amber, a nod to tortoiseshell eyewear frames.
+        accent: {
+          50: "#fffbeb",
+          100: "#fef3c7",
+          200: "#fde68a",
+          300: "#fcd34d",
+          400: "#fbbf24",
+          500: "#f59e0b",
+          600: "#d97706",
+          700: "#b45309",
+          800: "#92400e",
+          900: "#78350f",
+          950: "#451a03"
         }
       },
       boxShadow: {
-        soft: "0 1px 2px rgba(16, 24, 40, 0.04), 0 8px 24px rgba(16, 24, 40, 0.06)",
-        glow: "0 8px 24px rgba(79, 70, 229, 0.25)"
+        soft: "0 1px 2px rgba(12, 21, 18, 0.04), 0 8px 24px rgba(12, 21, 18, 0.06)",
+        glow: "0 8px 24px rgba(15, 118, 110, 0.25)"
       }
     }
   },
