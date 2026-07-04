@@ -16,6 +16,20 @@ END $$;
 
 DO $$
 BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'gender_type') THEN
+    CREATE TYPE gender_type AS ENUM ('male', 'female', 'other');
+  END IF;
+END $$;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'payment_method') THEN
+    CREATE TYPE payment_method AS ENUM ('cash', 'card', 'upi', 'bank_transfer');
+  END IF;
+END $$;
+
+DO $$
+BEGIN
   IF EXISTS (SELECT 1 FROM pg_type WHERE typname = 'staff_role') THEN
     ALTER TYPE staff_role ADD VALUE IF NOT EXISTS 'owner';
     ALTER TYPE staff_role ADD VALUE IF NOT EXISTS 'branch_admin';
@@ -170,7 +184,7 @@ CREATE TABLE IF NOT EXISTS customer (
   city VARCHAR(100),
   state VARCHAR(100),
   pincode VARCHAR(10),
-  gender VARCHAR(20),
+  gender gender_type,
   is_active BOOLEAN NOT NULL DEFAULT TRUE,
   created_by INT REFERENCES staff(staff_id),
   updated_by INT REFERENCES staff(staff_id),
@@ -233,7 +247,18 @@ ALTER TABLE customer ADD COLUMN IF NOT EXISTS dob DATE;
 ALTER TABLE customer ADD COLUMN IF NOT EXISTS city VARCHAR(100);
 ALTER TABLE customer ADD COLUMN IF NOT EXISTS state VARCHAR(100);
 ALTER TABLE customer ADD COLUMN IF NOT EXISTS pincode VARCHAR(10);
-ALTER TABLE customer ADD COLUMN IF NOT EXISTS gender VARCHAR(20);
+ALTER TABLE customer ADD COLUMN IF NOT EXISTS gender gender_type;
+-- Back-fill: convert legacy VARCHAR gender columns to the enum in place.
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_name = 'customer' AND column_name = 'gender' AND data_type <> 'USER-DEFINED'
+  ) THEN
+    ALTER TABLE customer
+      ALTER COLUMN gender TYPE gender_type USING NULLIF(gender, '')::gender_type;
+  END IF;
+END $$;
 ALTER TABLE customer ADD COLUMN IF NOT EXISTS is_active BOOLEAN NOT NULL DEFAULT TRUE;
 ALTER TABLE customer ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 ALTER TABLE customer ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
@@ -552,7 +577,7 @@ CREATE TABLE IF NOT EXISTS sales_invoice (
   igst_amount DECIMAL(12,2) NOT NULL DEFAULT 0,
   total_amount DECIMAL(12,2) NOT NULL DEFAULT 0,
   payment_status VARCHAR(50) NOT NULL DEFAULT 'pending',
-  payment_method VARCHAR(30),
+  payment_method payment_method,
   notes TEXT,
   created_by INT REFERENCES staff(staff_id),
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
@@ -569,7 +594,18 @@ ALTER TABLE sales_invoice ADD COLUMN IF NOT EXISTS sgst_amount DECIMAL(12,2) NOT
 ALTER TABLE sales_invoice ADD COLUMN IF NOT EXISTS igst_amount DECIMAL(12,2) NOT NULL DEFAULT 0;
 ALTER TABLE sales_invoice ADD COLUMN IF NOT EXISTS total_amount DECIMAL(12,2) NOT NULL DEFAULT 0;
 ALTER TABLE sales_invoice ADD COLUMN IF NOT EXISTS payment_status VARCHAR(50) NOT NULL DEFAULT 'pending';
-ALTER TABLE sales_invoice ADD COLUMN IF NOT EXISTS payment_method VARCHAR(30);
+ALTER TABLE sales_invoice ADD COLUMN IF NOT EXISTS payment_method payment_method;
+-- Back-fill: convert legacy VARCHAR payment_method to the enum in place.
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_name = 'sales_invoice' AND column_name = 'payment_method' AND data_type <> 'USER-DEFINED'
+  ) THEN
+    ALTER TABLE sales_invoice
+      ALTER COLUMN payment_method TYPE payment_method USING NULLIF(payment_method, '')::payment_method;
+  END IF;
+END $$;
 ALTER TABLE sales_invoice ADD COLUMN IF NOT EXISTS notes TEXT;
 ALTER TABLE sales_invoice ADD COLUMN IF NOT EXISTS created_by INT REFERENCES staff(staff_id);
 ALTER TABLE sales_invoice ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
@@ -612,11 +648,23 @@ CREATE TABLE IF NOT EXISTS expense (
     description TEXT,
     expense_date DATE NOT NULL DEFAULT CURRENT_DATE,
     paid_to VARCHAR(150),
-    payment_method VARCHAR(50),
+    payment_method payment_method,
     created_by INT REFERENCES staff(staff_id),
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
+
+-- Back-fill: convert legacy VARCHAR expense.payment_method to the enum in place.
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_name = 'expense' AND column_name = 'payment_method' AND data_type <> 'USER-DEFINED'
+  ) THEN
+    ALTER TABLE expense
+      ALTER COLUMN payment_method TYPE payment_method USING NULLIF(payment_method, '')::payment_method;
+  END IF;
+END $$;
 
 -- Stock Transfer Table
 CREATE TABLE IF NOT EXISTS stock_transfer (
